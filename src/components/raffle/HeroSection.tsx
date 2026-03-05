@@ -4,18 +4,18 @@ import { Heart } from 'lucide-react';
 
 const HeroSection = () => {
   return (
-    <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
+    <section className="relative min-h-[50vh] sm:min-h-[60vh] md:min-h-[70vh] flex items-center justify-center overflow-hidden">
       {/* Background image with overlay */}
       <div className="absolute inset-0">
-        <img src={coupleHero} alt="Casal apaixonado" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/50 to-background" />
+        <img src={coupleHero} alt="Casal apaixonado" className="w-full h-full object-cover object-center" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background" />
       </div>
 
-      {/* Floating particles */}
-      {[...Array(12)].map((_, i) => (
+      {/* Floating particles - fewer on mobile */}
+      {[...Array(8)].map((_, i) => (
         <motion.div
           key={i}
-          className="absolute w-1 h-1 rounded-full bg-primary/40"
+          className="absolute w-1 h-1 rounded-full bg-primary/40 hidden sm:block"
           style={{
             left: `${10 + Math.random() * 80}%`,
             top: `${10 + Math.random() * 80}%`,
@@ -33,25 +33,25 @@ const HeroSection = () => {
         />
       ))}
 
-      <div className="relative z-10 text-center px-4 max-w-3xl mx-auto">
+      <div className="relative z-10 text-center px-4 sm:px-6 max-w-3xl mx-auto py-8">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
           <motion.div
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/30 bg-primary/10 mb-6"
+            className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-primary/30 bg-primary/10 mb-4 sm:mb-6"
             animate={{ scale: [1, 1.03, 1] }}
             transition={{ duration: 2, repeat: Infinity }}
           >
-            <Heart className="w-4 h-4 text-primary fill-primary" />
-            <span className="text-sm font-medium text-primary">Nosso Grande Dia</span>
-            <Heart className="w-4 h-4 text-primary fill-primary" />
+            <Heart className="w-3 h-3 sm:w-4 sm:h-4 text-primary fill-primary" />
+            <span className="text-xs sm:text-sm font-medium text-primary">Nosso Grande Dia</span>
+            <Heart className="w-3 h-3 sm:w-4 sm:h-4 text-primary fill-primary" />
           </motion.div>
         </motion.div>
 
         <motion.h1
-          className="text-5xl md:text-7xl font-bold text-gradient-gold mb-4 leading-tight"
+          className="text-3xl sm:text-5xl md:text-7xl font-bold text-gradient-gold mb-3 sm:mb-4 leading-tight"
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
@@ -60,7 +60,7 @@ const HeroSection = () => {
         </motion.h1>
 
         <motion.p
-          className="text-lg md:text-xl text-foreground/70 mb-8 max-w-xl mx-auto"
+          className="text-sm sm:text-lg md:text-xl text-foreground/70 mb-6 sm:mb-8 max-w-xl mx-auto px-2"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
@@ -69,7 +69,7 @@ const HeroSection = () => {
         </motion.p>
 
         <motion.div
-          className="flex flex-wrap justify-center gap-6 text-center"
+          className="flex flex-wrap justify-center gap-3 sm:gap-6 text-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
@@ -79,9 +79,9 @@ const HeroSection = () => {
             { label: 'Por número', value: 'R$ 30' },
             { label: 'Prêmio', value: 'R$ 1.000' },
           ].map((item) => (
-            <div key={item.label} className="px-6 py-3 rounded-xl bg-card/80 border border-border backdrop-blur-sm">
-              <p className="text-2xl font-bold text-primary">{item.value}</p>
-              <p className="text-xs text-muted-foreground mt-1">{item.label}</p>
+            <div key={item.label} className="px-4 sm:px-6 py-2 sm:py-3 rounded-xl bg-card/80 border border-border backdrop-blur-sm">
+              <p className="text-lg sm:text-2xl font-bold text-primary">{item.value}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">{item.label}</p>
             </div>
           ))}
         </motion.div>
