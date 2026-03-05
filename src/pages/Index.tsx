@@ -11,7 +11,7 @@ const RAFFLE_CONFIG = {
   description: 'Ajude-nos a realizar nosso sonho!',
   prizeDescription: 'Prêmio surpresa para o ganhador',
   totalNumbers: 1000,
-  pricePerNumber: 10,
+  pricePerNumber: 30,
   pixKey: 'sua-chave-pix@email.com',
 };
 
