@@ -76,8 +76,8 @@ const HeroSection = () => {
         >
           {[
             { label: 'Números', value: '1.000' },
-            { label: 'Por número', value: 'R$ 10' },
-            { label: 'Prêmio', value: '🎁 Surpresa' },
+            { label: 'Por número', value: 'R$ 30' },
+            { label: 'Prêmio', value: 'R$ 1.000' },
           ].map((item) => (
             <div key={item.label} className="px-6 py-3 rounded-xl bg-card/80 border border-border backdrop-blur-sm">
               <p className="text-2xl font-bold text-primary">{item.value}</p>
