@@ -12,7 +12,7 @@ const RAFFLE_CONFIG = {
   prizeDescription: 'Prêmio surpresa para o ganhador',
   totalNumbers: 1000,
   pricePerNumber: 30,
-  pixKey: 'sua-chave-pix@email.com',
+  pixKey: '21972410175',
 };
 
 const Index = () => {

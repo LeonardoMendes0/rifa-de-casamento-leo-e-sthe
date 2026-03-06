@@ -169,18 +169,23 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
                 className="space-y-3 sm:space-y-4"
               >
                 <div className="bg-secondary rounded-xl p-4 sm:p-6 text-center border border-border">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground mb-2 sm:mb-3">Código PIX (Copia e Cola)</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mb-2 sm:mb-3">Chave PIX (Telefone)</p>
                   <div className="bg-background rounded-lg p-3 sm:p-4 font-mono text-xs sm:text-sm text-primary break-all border border-primary/20 select-all">
-                    {pixCode}
+                    21972410175
                   </div>
                   <Button
                     className="mt-3 sm:mt-4 bg-gradient-gold text-primary-foreground font-bold text-sm"
-                    onClick={handleCopy}
+                    onClick={async () => {
+                      await navigator.clipboard.writeText('21972410175');
+                      setCopied(true);
+                      toast({ title: 'Chave PIX copiada!' });
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
                   >
                     {copied ? (
                       <><Check className="w-4 h-4 mr-2" /> Copiado!</>
                     ) : (
-                      <><Copy className="w-4 h-4 mr-2" /> Copiar Código</>
+                      <><Copy className="w-4 h-4 mr-2" /> Copiar Chave PIX</>
                     )}
                   </Button>
                 </div>
