@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { ShoppingCart, Copy, Check, X, CreditCard } from 'lucide-react';
+import { ShoppingCart, Copy, Check, X, CreditCard, Loader2, Ticket, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PurchasePanelProps {
   selectedNumbers: number[];
@@ -13,29 +14,94 @@ interface PurchasePanelProps {
   onClear: () => void;
 }
 
+type Step = 'form' | 'loading' | 'pix';
+
+const generateTicketCode = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let s = '';
+  for (let i = 0; i < 5; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return `#RIFA-${s}`;
+};
+
+const maskCPF = (v: string) =>
+  v.replace(/\D/g, '')
+    .slice(0, 11)
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+
 const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: PurchasePanelProps) => {
   const [showDialog, setShowDialog] = useState(false);
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [pixCode, setPixCode] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [email, setEmail] = useState('');
+  const [step, setStep] = useState<Step>('form');
   const [copied, setCopied] = useState(false);
-  const [step, setStep] = useState<'form' | 'pix'>('form');
+  const [pixData, setPixData] = useState<{
+    qrCode: string;
+    qrCodeBase64: string;
+    ticketCode: string;
+  } | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(30 * 60);
   const { toast } = useToast();
 
   const total = selectedNumbers.length * pricePerNumber;
 
-  const handleSubmit = () => {
-    if (!name.trim() || !phone.trim()) {
-      toast({ title: 'Preencha todos os campos', variant: 'destructive' });
-      return;
+  useEffect(() => {
+    if (step !== 'pix') return;
+    if (secondsLeft <= 0) return;
+    const t = setInterval(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => clearInterval(t);
+  }, [step, secondsLeft]);
+
+  const formatTime = (s: number) => {
+    const m = Math.floor(Math.max(s, 0) / 60).toString().padStart(2, '0');
+    const r = (Math.max(s, 0) % 60).toString().padStart(2, '0');
+    return `${m}:${r}`;
+  };
+
+  const handleSubmit = async () => {
+    const cleanCpf = cpf.replace(/\D/g, '');
+    if (name.trim().length < 3) return toast({ title: 'Informe seu nome completo', variant: 'destructive' });
+    if (cleanCpf.length !== 11) return toast({ title: 'CPF inválido', variant: 'destructive' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast({ title: 'E-mail inválido', variant: 'destructive' });
+
+    const ticketCode = generateTicketCode();
+    setStep('loading');
+
+    try {
+      const { data, error } = await supabase.functions.invoke('create-pix-payment', {
+        body: {
+          payer: { name: name.trim(), cpf: cleanCpf, email: email.trim() },
+          amount: total,
+          ticketCode,
+          selectedNumbers,
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.qrCode) throw new Error('Resposta inválida do Mercado Pago');
+
+      onConfirm(name.trim(), cleanCpf);
+      setPixData({
+        qrCode: data.qrCode,
+        qrCodeBase64: data.qrCodeBase64,
+        ticketCode: data.ticketCode || ticketCode,
+      });
+      setSecondsLeft(30 * 60);
+      setStep('pix');
+      toast({ title: 'PIX gerado!', description: `Bilhete ${ticketCode} reservado.` });
+    } catch (e) {
+      console.error(e);
+      const msg = e instanceof Error ? e.message : 'Erro ao gerar PIX';
+      toast({ title: 'Falha ao gerar PIX', description: msg, variant: 'destructive' });
+      setStep('form');
     }
-    const code = onConfirm(name.trim(), phone.trim());
-    setPixCode(code);
-    setStep('pix');
   };
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(pixCode);
+    if (!pixData?.qrCode) return;
+    await navigator.clipboard.writeText(pixData.qrCode);
     setCopied(true);
     toast({ title: 'Código PIX copiado!' });
     setTimeout(() => setCopied(false), 2000);
@@ -43,10 +109,14 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
 
   const handleClose = () => {
     setShowDialog(false);
-    setStep('form');
-    setName('');
-    setPhone('');
-    setPixCode('');
+    setTimeout(() => {
+      setStep('form');
+      setName('');
+      setCpf('');
+      setEmail('');
+      setPixData(null);
+      setSecondsLeft(30 * 60);
+    }, 200);
   };
 
   if (selectedNumbers.length === 0) return null;
@@ -88,9 +158,8 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
             </div>
           </div>
 
-          {/* Selected numbers preview */}
           <div className="flex flex-wrap gap-1 mt-2 sm:mt-3 max-h-12 sm:max-h-16 overflow-y-auto">
-            {selectedNumbers.map(n => (
+            {selectedNumbers.map((n) => (
               <span
                 key={n}
                 className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded bg-primary/20 text-primary font-mono font-bold"
@@ -102,97 +171,140 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
         </div>
       </motion.div>
 
-      <Dialog open={showDialog} onOpenChange={handleClose}>
+      <Dialog open={showDialog} onOpenChange={(o) => !o && handleClose()}>
         <DialogContent className="bg-card border-border max-w-[calc(100vw-2rem)] sm:max-w-md mx-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-gradient-gold text-lg sm:text-xl">
-              {step === 'form' ? 'Finalizar Compra' : 'Pagamento PIX'}
+              {step === 'form' && 'Seus dados'}
+              {step === 'loading' && 'Gerando PIX...'}
+              {step === 'pix' && 'Pagamento PIX'}
             </DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
-              {step === 'form'
-                ? `${selectedNumbers.length} número(s) · R$ ${total.toFixed(2)}`
-                : 'Copie o código abaixo e pague via PIX'}
+              {step === 'form' && `${selectedNumbers.length} número(s) · R$ ${total.toFixed(2)}`}
+              {step === 'loading' && 'Aguarde, criando seu pagamento no Mercado Pago'}
+              {step === 'pix' && 'Escaneie o QR Code ou copie o código abaixo'}
             </DialogDescription>
           </DialogHeader>
 
           <AnimatePresence mode="wait">
-            {step === 'form' ? (
+            {step === 'form' && (
               <motion.div
                 key="form"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 className="space-y-3 sm:space-y-4"
               >
                 <div>
-                  <label className="text-xs sm:text-sm text-muted-foreground mb-1 block">Seu nome</label>
+                  <label className="text-xs sm:text-sm text-muted-foreground mb-1 block">Nome completo</label>
                   <Input
-                    placeholder="Nome completo"
+                    placeholder="João da Silva"
                     value={name}
-                    onChange={e => setName(e.target.value)}
+                    onChange={(e) => setName(e.target.value)}
                     className="bg-secondary border-border text-sm"
                   />
                 </div>
                 <div>
-                  <label className="text-xs sm:text-sm text-muted-foreground mb-1 block">WhatsApp</label>
+                  <label className="text-xs sm:text-sm text-muted-foreground mb-1 block">CPF</label>
                   <Input
-                    placeholder="(00) 00000-0000"
-                    value={phone}
-                    onChange={e => setPhone(e.target.value)}
+                    placeholder="000.000.000-00"
+                    value={cpf}
+                    onChange={(e) => setCpf(maskCPF(e.target.value))}
+                    inputMode="numeric"
                     className="bg-secondary border-border text-sm"
                   />
                 </div>
-
-                <div className="bg-secondary/50 rounded-lg p-2 sm:p-3 border border-border">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground mb-1.5 sm:mb-2">Números escolhidos:</p>
-                  <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
-                    {selectedNumbers.map(n => (
-                      <span key={n} className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded bg-primary/20 text-primary font-mono font-bold">
-                        {String(n).padStart(3, '0')}
-                      </span>
-                    ))}
-                  </div>
+                <div>
+                  <label className="text-xs sm:text-sm text-muted-foreground mb-1 block">E-mail</label>
+                  <Input
+                    type="email"
+                    placeholder="voce@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="bg-secondary border-border text-sm"
+                  />
                 </div>
 
                 <Button
                   className="w-full bg-gradient-gold text-primary-foreground font-bold h-10 sm:h-12 text-sm"
                   onClick={handleSubmit}
                 >
-                  Gerar Código PIX
+                  Gerar PIX (R$ {total.toFixed(2)})
                 </Button>
               </motion.div>
-            ) : (
+            )}
+
+            {step === 'loading' && (
+              <motion.div
+                key="loading"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col items-center justify-center py-10"
+              >
+                <Loader2 className="w-10 h-10 text-primary animate-spin mb-3" />
+                <p className="text-sm text-muted-foreground">Conectando ao Mercado Pago...</p>
+              </motion.div>
+            )}
+
+            {step === 'pix' && pixData && (
               <motion.div
                 key="pix"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 className="space-y-3 sm:space-y-4"
               >
-                <div className="bg-secondary rounded-xl p-4 sm:p-6 text-center border border-border">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground mb-2 sm:mb-3">Chave PIX (Telefone)</p>
-                  <div className="bg-background rounded-lg p-3 sm:p-4 font-mono text-xs sm:text-sm text-primary break-all border border-primary/20 select-all">
-                    21972410175
+                <div className="bg-accent/10 border border-accent/30 rounded-lg p-2.5 sm:p-3 flex items-center gap-2">
+                  <Ticket className="w-4 h-4 text-accent shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Seu bilhete</p>
+                    <p className="text-sm sm:text-base font-mono font-bold text-accent break-all">
+                      {pixData.ticketCode}
+                    </p>
+                  </div>
+                </div>
+
+                {pixData.qrCodeBase64 && (
+                  <div className="bg-white rounded-xl p-3 sm:p-4 flex justify-center">
+                    <img
+                      src={`data:image/png;base64,${pixData.qrCodeBase64}`}
+                      alt="QR Code PIX"
+                      className="w-48 h-48 sm:w-56 sm:h-56"
+                    />
+                  </div>
+                )}
+
+                <div className="bg-secondary rounded-lg p-3 border border-border">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mb-2">Código PIX (copia e cola)</p>
+                  <div className="bg-background rounded-md p-2 sm:p-3 font-mono text-[10px] sm:text-xs text-foreground break-all border border-border max-h-24 overflow-y-auto">
+                    {pixData.qrCode}
                   </div>
                   <Button
-                    className="mt-3 sm:mt-4 bg-gradient-gold text-primary-foreground font-bold text-sm"
-                    onClick={async () => {
-                      await navigator.clipboard.writeText('21972410175');
-                      setCopied(true);
-                      toast({ title: 'Chave PIX copiada!' });
-                      setTimeout(() => setCopied(false), 2000);
-                    }}
+                    className="w-full mt-3 bg-gradient-gold text-primary-foreground font-bold text-sm"
+                    onClick={handleCopy}
                   >
                     {copied ? (
                       <><Check className="w-4 h-4 mr-2" /> Copiado!</>
                     ) : (
-                      <><Copy className="w-4 h-4 mr-2" /> Copiar Chave PIX</>
+                      <><Copy className="w-4 h-4 mr-2" /> Copiar código PIX</>
                     )}
                   </Button>
                 </div>
 
-                <div className="bg-accent/10 border border-accent/20 rounded-lg p-2.5 sm:p-3">
-                  <p className="text-[10px] sm:text-xs text-accent font-medium">
-                    ⚠️ Após o pagamento, envie o comprovante pelo WhatsApp para confirmarmos sua reserva.
+                <div className="flex items-center justify-between bg-secondary/50 rounded-lg p-2.5 border border-border">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-primary" />
+                    <span className="text-xs text-muted-foreground">Expira em</span>
+                  </div>
+                  <span className="text-sm font-mono font-bold text-primary">
+                    {formatTime(secondsLeft)}
+                  </span>
+                </div>
+
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-2.5 sm:p-3">
+                  <p className="text-[11px] sm:text-xs text-foreground">
+                    ✅ Bilhete <span className="font-bold text-primary">{pixData.ticketCode}</span> reservado!
+                    Após o pagamento, seus números serão confirmados automaticamente.
                   </p>
                 </div>
 
