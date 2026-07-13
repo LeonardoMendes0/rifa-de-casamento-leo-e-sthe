@@ -14,13 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      raffle_numbers: {
+        Row: {
+          buyer_email: string | null
+          buyer_name: string | null
+          buyer_phone: string | null
+          created_at: string
+          id: number
+          number: number
+          payment_id: string | null
+          reserved_at: string | null
+          status: string
+        }
+        Insert: {
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_phone?: string | null
+          created_at?: string
+          id?: number
+          number: number
+          payment_id?: string | null
+          reserved_at?: string | null
+          status?: string
+        }
+        Update: {
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_phone?: string | null
+          created_at?: string
+          id?: number
+          number?: number
+          payment_id?: string | null
+          reserved_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      release_expired_reservations: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
