@@ -115,7 +115,7 @@ const AdminPanel = ({ numbers, onConfirmPayment, onCancelReservation }: AdminPan
                           </span>
                         </TableCell>
                         <TableCell className="font-mono text-[10px] max-w-[120px] truncate">
-                          {n.pixCode}
+                          {n.buyerPhone}
                         </TableCell>
                         <TableCell>
                           {n.status === 'pending' && (
