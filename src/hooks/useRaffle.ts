@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 export type NumberStatus = 'available' | 'pending' | 'sold';
 
@@ -7,8 +8,6 @@ export interface RaffleNumber {
   status: NumberStatus;
   buyerName?: string;
   buyerPhone?: string;
-  pixCode?: string;
-  timestamp?: Date;
 }
 
 export interface RaffleConfig {
@@ -20,94 +19,85 @@ export interface RaffleConfig {
   pixKey: string;
 }
 
-const STORAGE_KEY = 'wedding-raffle-data';
-
-const generatePixCode = (): string => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  const segments = [8, 4, 4, 4, 12];
-  return segments
-    .map(len =>
-      Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
-    )
-    .join('-');
-};
-
-const loadNumbers = (total: number): RaffleNumber[] => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved) as RaffleNumber[];
-      if (parsed.length === total) return parsed;
-    }
-  } catch {}
-  return Array.from({ length: total }, (_, i) => ({
-    number: i + 1,
-    status: 'available' as NumberStatus,
-  }));
-};
+const mapStatus = (s: string): NumberStatus =>
+  s === 'paid' ? 'sold' : s === 'reserved' ? 'pending' : 'available';
 
 export const useRaffle = (config: RaffleConfig) => {
-  const [numbers, setNumbers] = useState<RaffleNumber[]>(() => loadNumbers(config.totalNumbers));
+  const [numbers, setNumbers] = useState<RaffleNumber[]>(() =>
+    Array.from({ length: config.totalNumbers }, (_, i) => ({
+      number: i + 1,
+      status: 'available' as NumberStatus,
+    })),
+  );
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
 
-  const saveNumbers = useCallback((nums: RaffleNumber[]) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nums));
+  const fetchAll = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('raffle_numbers')
+      .select('number,status,buyer_name,buyer_phone')
+      .order('number', { ascending: true });
+    if (error || !data) return;
+    setNumbers(
+      data.map((r: any) => ({
+        number: r.number,
+        status: mapStatus(r.status),
+        buyerName: r.buyer_name ?? undefined,
+        buyerPhone: r.buyer_phone ?? undefined,
+      })),
+    );
   }, []);
 
+  useEffect(() => {
+    fetchAll();
+    const channel = supabase
+      .channel('raffle_numbers_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'raffle_numbers' },
+        () => fetchAll(),
+      )
+      .subscribe();
+
+    const poll = setInterval(fetchAll, 15000);
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(poll);
+    };
+  }, [fetchAll]);
+
   const toggleNumber = useCallback((num: number) => {
-    setSelectedNumbers(prev =>
-      prev.includes(num) ? prev.filter(n => n !== num) : [...prev, num]
+    setSelectedNumbers((prev) =>
+      prev.includes(num) ? prev.filter((n) => n !== num) : [...prev, num],
     );
   }, []);
 
   const clearSelection = useCallback(() => setSelectedNumbers([]), []);
 
+  // Compat: chamado após gerar PIX. A reserva real acontece na edge function.
   const confirmPurchase = useCallback(
-    (buyerName: string, buyerPhone: string) => {
-      const pixCode = generatePixCode();
-      const updated = numbers.map(n =>
-        selectedNumbers.includes(n.number)
-          ? { ...n, status: 'pending' as NumberStatus, buyerName, buyerPhone, pixCode, timestamp: new Date() }
-          : n
-      );
-      setNumbers(updated);
-      saveNumbers(updated);
+    (_name: string, _phone: string) => {
       setSelectedNumbers([]);
-      return pixCode;
+      fetchAll();
+      return '';
     },
-    [numbers, selectedNumbers, saveNumbers]
+    [fetchAll],
   );
 
-  const confirmPayment = useCallback(
-    (num: number) => {
-      const updated = numbers.map(n =>
-        n.number === num ? { ...n, status: 'sold' as NumberStatus } : n
-      );
-      setNumbers(updated);
-      saveNumbers(updated);
-    },
-    [numbers, saveNumbers]
-  );
+  const confirmPayment = useCallback(async (_num: number) => {
+    // Admin: confirmação manual é feita pelo webhook do Mercado Pago.
+    await fetchAll();
+  }, [fetchAll]);
 
-  const cancelReservation = useCallback(
-    (num: number) => {
-      const updated = numbers.map(n =>
-        n.number === num
-          ? { number: n.number, status: 'available' as NumberStatus }
-          : n
-      );
-      setNumbers(updated);
-      saveNumbers(updated);
-    },
-    [numbers, saveNumbers]
-  );
+  const cancelReservation = useCallback(async (_num: number) => {
+    await fetchAll();
+  }, [fetchAll]);
 
   const stats = {
-    available: numbers.filter(n => n.status === 'available').length,
-    pending: numbers.filter(n => n.status === 'pending').length,
-    sold: numbers.filter(n => n.status === 'sold').length,
+    available: numbers.filter((n) => n.status === 'available').length,
+    pending: numbers.filter((n) => n.status === 'pending').length,
+    sold: numbers.filter((n) => n.status === 'sold').length,
     total: config.totalNumbers,
-    revenue: numbers.filter(n => n.status === 'sold').length * config.pricePerNumber,
+    revenue: numbers.filter((n) => n.status === 'sold').length * config.pricePerNumber,
   };
 
   return {
@@ -120,5 +110,6 @@ export const useRaffle = (config: RaffleConfig) => {
     cancelReservation,
     stats,
     config,
+    refresh: fetchAll,
   };
 };
