@@ -37,11 +37,9 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
   const [email, setEmail] = useState('');
   const [step, setStep] = useState<Step>('form');
   const [copied, setCopied] = useState(false);
-  const [pixData, setPixData] = useState<{
-    qrCode: string;
-    qrCodeBase64: string;
-    ticketCode: string;
-  } | null>(null);
+  const [ticketCode, setTicketCode] = useState('');
+  const [qrCodeBase64, setQrCodeBase64] = useState('');
+  const [copiaCola, setCopiaCola] = useState('');
   const [secondsLeft, setSecondsLeft] = useState(30 * 60);
   const { toast } = useToast();
 
