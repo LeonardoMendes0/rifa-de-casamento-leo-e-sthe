@@ -81,11 +81,9 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
       if (!data?.qrCode) throw new Error('Resposta inválida do Mercado Pago');
 
       onConfirm(name.trim(), cleanCpf);
-      setPixData({
-        qrCode: data.qrCode,
-        qrCodeBase64: data.qrCodeBase64,
-        ticketCode: data.ticketCode || ticketCode,
-      });
+      setQrCodeBase64(data.qrCodeBase64 || '');
+      setCopiaCola(data.qrCode || '');
+      setTicketCode(data.ticketCode || ticketCode);
       setSecondsLeft(30 * 60);
       setStep('pix');
       toast({ title: 'PIX gerado!', description: `Bilhete ${ticketCode} reservado.` });
@@ -98,8 +96,8 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
   };
 
   const handleCopy = async () => {
-    if (!pixData?.qrCode) return;
-    await navigator.clipboard.writeText(pixData.qrCode);
+    if (!copiaCola) return;
+    await navigator.clipboard.writeText(copiaCola);
     setCopied(true);
     toast({ title: 'Código PIX copiado!' });
     setTimeout(() => setCopied(false), 2000);
@@ -112,7 +110,9 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
       setName('');
       setCpf('');
       setEmail('');
-      setPixData(null);
+      setTicketCode('');
+      setQrCodeBase64('');
+      setCopiaCola('');
       setSecondsLeft(30 * 60);
     }, 200);
   };
