@@ -245,7 +245,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
               </motion.div>
             )}
 
-            {step === 'pix' && pixData && (
+            {step === 'pix' && (
               <motion.div
                 key="pix"
                 initial={{ opacity: 0 }}
@@ -257,15 +257,15 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
                   <div className="min-w-0">
                     <p className="text-[10px] sm:text-xs text-muted-foreground">Seu bilhete</p>
                     <p className="text-sm sm:text-base font-mono font-bold text-accent break-all">
-                      {pixData.ticketCode}
+                      {ticketCode}
                     </p>
                   </div>
                 </div>
 
-                {pixData.qrCodeBase64 && (
+                {qrCodeBase64 && (
                   <div className="bg-white rounded-xl p-3 sm:p-4 flex justify-center">
                     <img
-                      src={`data:image/png;base64,${pixData.qrCodeBase64}`}
+                      src={`data:image/png;base64,${qrCodeBase64}`}
                       alt="QR Code PIX"
                       className="w-48 h-48 sm:w-56 sm:h-56"
                     />
@@ -275,7 +275,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
                 <div className="bg-secondary rounded-lg p-3 border border-border">
                   <p className="text-[10px] sm:text-xs text-muted-foreground mb-2">Código PIX (copia e cola)</p>
                   <div className="bg-background rounded-md p-2 sm:p-3 font-mono text-[10px] sm:text-xs text-foreground break-all border border-border max-h-24 overflow-y-auto">
-                    {pixData.qrCode}
+                    {copiaCola}
                   </div>
                   <Button
                     className="w-full mt-3 bg-gradient-gold text-primary-foreground font-bold text-sm"
@@ -301,7 +301,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
 
                 <div className="bg-primary/10 border border-primary/20 rounded-lg p-2.5 sm:p-3">
                   <p className="text-[11px] sm:text-xs text-foreground">
-                    ✅ Bilhete <span className="font-bold text-primary">{pixData.ticketCode}</span> reservado!
+                    ✅ Bilhete <span className="font-bold text-primary">{ticketCode}</span> reservado!
                     Após o pagamento, seus números serão confirmados automaticamente.
                   </p>
                 </div>
