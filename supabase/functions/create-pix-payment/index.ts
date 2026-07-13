@@ -1,3 +1,5 @@
+import { createClient } from 'npm:@supabase/supabase-js@2';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -36,10 +38,15 @@ function validate(body: any): { ok: true; data: RequestBody } | { ok: false; err
       payer: { name: payer.name.trim(), cpf, email: payer.email.trim() },
       amount,
       ticketCode,
-      selectedNumbers,
+      selectedNumbers: selectedNumbers.map((n: any) => Number(n)),
     },
   };
 }
+
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+);
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -61,14 +68,55 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const { payer, amount, ticketCode } = v.data;
+    const { payer, amount, ticketCode, selectedNumbers } = v.data;
 
+    // 1) Reservar atomicamente todos os números escolhidos.
+    const reservedAt = new Date().toISOString();
+    const { data: reserved, error: reserveErr } = await supabase
+      .from('raffle_numbers')
+      .update({
+        status: 'reserved',
+        reserved_at: reservedAt,
+        buyer_name: payer.name,
+        buyer_phone: payer.cpf,
+        buyer_email: payer.email,
+      })
+      .in('number', selectedNumbers)
+      .eq('status', 'available')
+      .select('number');
+
+    if (reserveErr) throw reserveErr;
+
+    if (!reserved || reserved.length !== selectedNumbers.length) {
+      // Rollback: liberar o que conseguimos reservar agora
+      if (reserved && reserved.length > 0) {
+        await supabase
+          .from('raffle_numbers')
+          .update({
+            status: 'available',
+            reserved_at: null,
+            buyer_name: null,
+            buyer_phone: null,
+            buyer_email: null,
+          })
+          .in('number', reserved.map((r: any) => r.number));
+      }
+      const taken = selectedNumbers.filter((n) => !(reserved || []).some((r: any) => r.number === n));
+      return new Response(
+        JSON.stringify({
+          error: `Números indisponíveis: ${taken.join(', ')}. Escolha outros.`,
+        }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // 2) Criar cobrança PIX no Mercado Pago
     const [firstName, ...rest] = payer.name.split(' ');
     const lastName = rest.join(' ') || firstName;
 
     const mpBody = {
       transaction_amount: Number(amount.toFixed(2)),
-      description: `Bilhete Rifa Leo e Sthe - Código ${ticketCode}`,
+      description: `Bilhete Rifa Leo e Sthe - ${ticketCode}`,
       payment_method_id: 'pix',
       payer: {
         email: payer.email,
@@ -78,14 +126,12 @@ Deno.serve(async (req) => {
       },
     };
 
-    const idempotencyKey = `${ticketCode}-${Date.now()}`;
-
     const mpRes = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
-        'X-Idempotency-Key': idempotencyKey,
+        'X-Idempotency-Key': `${ticketCode}-${Date.now()}`,
       },
       body: JSON.stringify(mpBody),
     });
@@ -94,6 +140,18 @@ Deno.serve(async (req) => {
 
     if (!mpRes.ok) {
       console.error('Mercado Pago error', mpRes.status, mpData);
+      // Rollback
+      await supabase
+        .from('raffle_numbers')
+        .update({
+          status: 'available',
+          reserved_at: null,
+          buyer_name: null,
+          buyer_phone: null,
+          buyer_email: null,
+        })
+        .in('number', selectedNumbers);
+
       return new Response(
         JSON.stringify({
           error: mpData?.message || 'Falha ao gerar PIX no Mercado Pago',
@@ -102,6 +160,12 @@ Deno.serve(async (req) => {
         { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
+
+    // 3) Salvar payment_id nos números reservados
+    await supabase
+      .from('raffle_numbers')
+      .update({ payment_id: String(mpData.id) })
+      .in('number', selectedNumbers);
 
     const tx = mpData?.point_of_interaction?.transaction_data || {};
 
