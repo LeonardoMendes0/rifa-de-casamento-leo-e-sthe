@@ -82,8 +82,17 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
       if (!data?.qrCode) throw new Error('Resposta inválida do Mercado Pago');
 
       onConfirm(name.trim(), cleanCpf);
-      setQrCodeBase64(data.qrCodeBase64 || '');
-      setCopiaCola(data.qrCode || '');
+      const copia = data.qrCode || '';
+      let qrImg = data.qrCodeBase64 ? `data:image/png;base64,${data.qrCodeBase64}` : '';
+      if (!qrImg && copia) {
+        try {
+          qrImg = await QRCode.toDataURL(copia, { width: 320, margin: 1 });
+        } catch (err) {
+          console.error('QR fallback failed', err);
+        }
+      }
+      setQrCodeBase64(qrImg);
+      setCopiaCola(copia);
       setTicketCode(data.ticketCode || ticketCode);
       setSecondsLeft(30 * 60);
       setStep('pix');
