@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { ShoppingCart, Copy, Check, X, CreditCard, Loader2, Ticket, Clock } from 'lucide-react';
+import { ShoppingCart, Copy, Check, X, CreditCard, Loader2, Ticket, Clock, PartyPopper } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
