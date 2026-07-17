@@ -122,6 +122,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
       setQrCodeBase64(qrImg);
       setCopiaCola(copia);
       setTicketCode(data.ticketCode || ticketCode);
+      setPaymentId(data.paymentId ? String(data.paymentId) : '');
       setSecondsLeft(30 * 60);
       setStep('pix');
       toast({ title: 'PIX gerado!', description: `Bilhete ${ticketCode} reservado.` });
