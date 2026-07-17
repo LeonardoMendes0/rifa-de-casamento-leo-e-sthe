@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { ShoppingCart, Copy, Check, X, CreditCard, Loader2, Ticket, Clock } from 'lucide-react';
+import { ShoppingCart, Copy, Check, X, CreditCard, Loader2, Ticket, Clock, PartyPopper } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -15,7 +15,7 @@ interface PurchasePanelProps {
   onClear: () => void;
 }
 
-type Step = 'form' | 'loading' | 'pix';
+type Step = 'form' | 'loading' | 'pix' | 'paid';
 
 const generateTicketCode = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -42,6 +42,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
   const [qrCodeBase64, setQrCodeBase64] = useState('');
   const [copiaCola, setCopiaCola] = useState('');
   const [secondsLeft, setSecondsLeft] = useState(30 * 60);
+  const [paymentId, setPaymentId] = useState<string>('');
   const { toast } = useToast();
 
   const total = selectedNumbers.length * pricePerNumber;
@@ -52,6 +53,33 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
     const t = setInterval(() => setSecondsLeft((s) => s - 1), 1000);
     return () => clearInterval(t);
   }, [step, secondsLeft]);
+
+  // Polling: verifica status do pagamento a cada 4s enquanto o modal PIX está aberto
+  useEffect(() => {
+    if (step !== 'pix' || !paymentId) return;
+    let cancelled = false;
+
+    const check = async () => {
+      const { data } = await supabase
+        .from('raffle_numbers')
+        .select('status')
+        .eq('payment_id', paymentId)
+        .limit(1)
+        .maybeSingle();
+      if (cancelled) return;
+      if (data?.status === 'paid') {
+        setStep('paid');
+        toast({ title: 'Pagamento confirmado! 🎉', description: `Bilhete ${ticketCode} confirmado.` });
+      }
+    };
+
+    check();
+    const t = setInterval(check, 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [step, paymentId, ticketCode, toast]);
 
   const formatTime = (s: number) => {
     const m = Math.floor(Math.max(s, 0) / 60).toString().padStart(2, '0');
@@ -94,6 +122,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
       setQrCodeBase64(qrImg);
       setCopiaCola(copia);
       setTicketCode(data.ticketCode || ticketCode);
+      setPaymentId(data.paymentId ? String(data.paymentId) : '');
       setSecondsLeft(30 * 60);
       setStep('pix');
       toast({ title: 'PIX gerado!', description: `Bilhete ${ticketCode} reservado.` });
@@ -114,7 +143,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
   };
 
   const handleClose = () => {
-    const shouldClearSelection = step === 'pix';
+    const shouldClearSelection = step === 'pix' || step === 'paid';
     setShowDialog(false);
     setTimeout(() => {
       setStep('form');
@@ -124,6 +153,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
       setTicketCode('');
       setQrCodeBase64('');
       setCopiaCola('');
+      setPaymentId('');
       setSecondsLeft(30 * 60);
       if (shouldClearSelection) onClear();
     }, 200);
@@ -188,11 +218,13 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
               {step === 'form' && 'Seus dados'}
               {step === 'loading' && 'Gerando PIX...'}
               {step === 'pix' && 'Pagamento PIX'}
+              {step === 'paid' && 'Pagamento confirmado! 🎉'}
             </DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
               {step === 'form' && `${selectedNumbers.length} número(s) · R$ ${total.toFixed(2)}`}
               {step === 'loading' && 'Aguarde, criando seu pagamento no Mercado Pago'}
               {step === 'pix' && 'Escaneie o QR Code ou copie o código abaixo'}
+              {step === 'paid' && 'Seus números foram confirmados com sucesso'}
             </DialogDescription>
           </DialogHeader>
 
@@ -324,6 +356,69 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
                     {selectedNumbers.length} número(s) × R$ {pricePerNumber.toFixed(2)}
                   </p>
                 </div>
+              </motion.div>
+            )}
+
+            {step === 'paid' && (
+              <motion.div
+                key="paid"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="space-y-4 py-2"
+              >
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mb-3">
+                    <PartyPopper className="w-10 h-10 text-primary" />
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-bold text-gradient-gold">
+                    Pagamento confirmado!
+                  </h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                    Obrigado por participar da nossa rifa 💛
+                  </p>
+                </div>
+
+                <div className="bg-accent/10 border border-accent/30 rounded-lg p-3 flex items-center gap-2">
+                  <Ticket className="w-4 h-4 text-accent shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Seu bilhete</p>
+                    <p className="text-sm sm:text-base font-mono font-bold text-accent break-all">
+                      {ticketCode}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-secondary rounded-lg p-3 border border-border">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mb-2">
+                    Números confirmados
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedNumbers.map((n) => (
+                      <span
+                        key={n}
+                        className="text-[10px] sm:text-xs px-1.5 py-0.5 rounded bg-primary/20 text-primary font-mono font-bold"
+                      >
+                        {String(n).padStart(3, '0')}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="text-center">
+                  <p className="text-xl sm:text-2xl font-bold text-primary">
+                    R$ {total.toFixed(2)}
+                  </p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+                    Pagamento recebido com sucesso
+                  </p>
+                </div>
+
+                <Button
+                  className="w-full bg-gradient-gold text-primary-foreground font-bold h-10 sm:h-12 text-sm"
+                  onClick={handleClose}
+                >
+                  <Check className="w-4 h-4 mr-2" /> Concluir
+                </Button>
               </motion.div>
             )}
           </AnimatePresence>
