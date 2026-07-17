@@ -358,6 +358,69 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
                 </div>
               </motion.div>
             )}
+
+            {step === 'paid' && (
+              <motion.div
+                key="paid"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="space-y-4 py-2"
+              >
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mb-3">
+                    <PartyPopper className="w-10 h-10 text-primary" />
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-bold text-gradient-gold">
+                    Pagamento confirmado!
+                  </h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                    Obrigado por participar da nossa rifa 💛
+                  </p>
+                </div>
+
+                <div className="bg-accent/10 border border-accent/30 rounded-lg p-3 flex items-center gap-2">
+                  <Ticket className="w-4 h-4 text-accent shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Seu bilhete</p>
+                    <p className="text-sm sm:text-base font-mono font-bold text-accent break-all">
+                      {ticketCode}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-secondary rounded-lg p-3 border border-border">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mb-2">
+                    Números confirmados
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedNumbers.map((n) => (
+                      <span
+                        key={n}
+                        className="text-[10px] sm:text-xs px-1.5 py-0.5 rounded bg-primary/20 text-primary font-mono font-bold"
+                      >
+                        {String(n).padStart(3, '0')}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="text-center">
+                  <p className="text-xl sm:text-2xl font-bold text-primary">
+                    R$ {total.toFixed(2)}
+                  </p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+                    Pagamento recebido com sucesso
+                  </p>
+                </div>
+
+                <Button
+                  className="w-full bg-gradient-gold text-primary-foreground font-bold h-10 sm:h-12 text-sm"
+                  onClick={handleClose}
+                >
+                  <Check className="w-4 h-4 mr-2" /> Concluir
+                </Button>
+              </motion.div>
+            )}
           </AnimatePresence>
         </DialogContent>
       </Dialog>
