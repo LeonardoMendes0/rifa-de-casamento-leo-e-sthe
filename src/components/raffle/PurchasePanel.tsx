@@ -275,7 +275,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
                 {qrCodeBase64 && (
                   <div className="bg-white rounded-xl p-3 sm:p-4 flex justify-center">
                     <img
-                      src={`data:image/png;base64,${qrCodeBase64}`}
+                      src={qrCodeBase64}
                       alt="QR Code PIX"
                       className="w-48 h-48 sm:w-56 sm:h-56"
                     />
