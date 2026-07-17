@@ -42,6 +42,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
   const [qrCodeBase64, setQrCodeBase64] = useState('');
   const [copiaCola, setCopiaCola] = useState('');
   const [secondsLeft, setSecondsLeft] = useState(30 * 60);
+  const [paymentId, setPaymentId] = useState<string>('');
   const { toast } = useToast();
 
   const total = selectedNumbers.length * pricePerNumber;
