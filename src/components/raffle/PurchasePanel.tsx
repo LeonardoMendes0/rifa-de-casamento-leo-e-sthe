@@ -218,11 +218,13 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
               {step === 'form' && 'Seus dados'}
               {step === 'loading' && 'Gerando PIX...'}
               {step === 'pix' && 'Pagamento PIX'}
+              {step === 'paid' && 'Pagamento confirmado! 🎉'}
             </DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
               {step === 'form' && `${selectedNumbers.length} número(s) · R$ ${total.toFixed(2)}`}
               {step === 'loading' && 'Aguarde, criando seu pagamento no Mercado Pago'}
               {step === 'pix' && 'Escaneie o QR Code ou copie o código abaixo'}
+              {step === 'paid' && 'Seus números foram confirmados com sucesso'}
             </DialogDescription>
           </DialogHeader>
 
