@@ -54,6 +54,33 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
     return () => clearInterval(t);
   }, [step, secondsLeft]);
 
+  // Polling: verifica status do pagamento a cada 4s enquanto o modal PIX está aberto
+  useEffect(() => {
+    if (step !== 'pix' || !paymentId) return;
+    let cancelled = false;
+
+    const check = async () => {
+      const { data } = await supabase
+        .from('raffle_numbers')
+        .select('status')
+        .eq('payment_id', paymentId)
+        .limit(1)
+        .maybeSingle();
+      if (cancelled) return;
+      if (data?.status === 'paid') {
+        setStep('paid');
+        toast({ title: 'Pagamento confirmado! 🎉', description: `Bilhete ${ticketCode} confirmado.` });
+      }
+    };
+
+    check();
+    const t = setInterval(check, 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [step, paymentId, ticketCode, toast]);
+
   const formatTime = (s: number) => {
     const m = Math.floor(Math.max(s, 0) / 60).toString().padStart(2, '0');
     const r = (Math.max(s, 0) % 60).toString().padStart(2, '0');
