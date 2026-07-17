@@ -15,7 +15,7 @@ interface PurchasePanelProps {
   onClear: () => void;
 }
 
-type Step = 'form' | 'loading' | 'pix';
+type Step = 'form' | 'loading' | 'pix' | 'paid';
 
 const generateTicketCode = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
