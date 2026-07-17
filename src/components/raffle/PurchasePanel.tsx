@@ -114,6 +114,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
   };
 
   const handleClose = () => {
+    const shouldClearSelection = step === 'pix';
     setShowDialog(false);
     setTimeout(() => {
       setStep('form');
@@ -124,6 +125,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
       setQrCodeBase64('');
       setCopiaCola('');
       setSecondsLeft(30 * 60);
+      if (shouldClearSelection) onClear();
     }, 200);
   };
 

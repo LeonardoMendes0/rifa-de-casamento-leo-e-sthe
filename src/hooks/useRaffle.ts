@@ -76,7 +76,6 @@ export const useRaffle = (config: RaffleConfig) => {
   // Compat: chamado após gerar PIX. A reserva real acontece na edge function.
   const confirmPurchase = useCallback(
     (_name: string, _phone: string) => {
-      setSelectedNumbers([]);
       fetchAll();
       return '';
     },
