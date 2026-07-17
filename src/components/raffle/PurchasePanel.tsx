@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -81,8 +82,17 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
       if (!data?.qrCode) throw new Error('Resposta inválida do Mercado Pago');
 
       onConfirm(name.trim(), cleanCpf);
-      setQrCodeBase64(data.qrCodeBase64 || '');
-      setCopiaCola(data.qrCode || '');
+      const copia = data.qrCode || '';
+      let qrImg = data.qrCodeBase64 ? `data:image/png;base64,${data.qrCodeBase64}` : '';
+      if (!qrImg && copia) {
+        try {
+          qrImg = await QRCode.toDataURL(copia, { width: 320, margin: 1 });
+        } catch (err) {
+          console.error('QR fallback failed', err);
+        }
+      }
+      setQrCodeBase64(qrImg);
+      setCopiaCola(copia);
       setTicketCode(data.ticketCode || ticketCode);
       setSecondsLeft(30 * 60);
       setStep('pix');
@@ -265,7 +275,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
                 {qrCodeBase64 && (
                   <div className="bg-white rounded-xl p-3 sm:p-4 flex justify-center">
                     <img
-                      src={`data:image/png;base64,${qrCodeBase64}`}
+                      src={qrCodeBase64}
                       alt="QR Code PIX"
                       className="w-48 h-48 sm:w-56 sm:h-56"
                     />
