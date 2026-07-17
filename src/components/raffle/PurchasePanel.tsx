@@ -143,7 +143,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
   };
 
   const handleClose = () => {
-    const shouldClearSelection = step === 'pix';
+    const shouldClearSelection = step === 'pix' || step === 'paid';
     setShowDialog(false);
     setTimeout(() => {
       setStep('form');
@@ -153,6 +153,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
       setTicketCode('');
       setQrCodeBase64('');
       setCopiaCola('');
+      setPaymentId('');
       setSecondsLeft(30 * 60);
       if (shouldClearSelection) onClear();
     }, 200);
