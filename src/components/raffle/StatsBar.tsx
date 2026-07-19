@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Ticket, Clock, CheckCircle2, TrendingUp } from 'lucide-react';
+import { Ticket, Clock, CheckCircle2 } from 'lucide-react';
 
 interface StatsBarProps {
   stats: {
@@ -7,7 +7,6 @@ interface StatsBarProps {
     pending: number;
     sold: number;
     total: number;
-    revenue: number;
   };
 }
 
@@ -18,13 +17,11 @@ const StatsBar = ({ stats }: StatsBarProps) => {
     { icon: Ticket, label: 'Disponíveis', value: stats.available, color: 'text-primary' },
     { icon: Clock, label: 'Pendentes', value: stats.pending, color: 'text-accent' },
     { icon: CheckCircle2, label: 'Vendidos', value: stats.sold, color: 'text-primary' },
-    { icon: TrendingUp, label: 'Arrecadado', value: `R$ ${stats.revenue}`, color: 'text-primary' },
   ];
 
   return (
     <section className="py-6 sm:py-8 px-3 sm:px-4">
       <div className="max-w-4xl mx-auto">
-        {/* Progress bar */}
         <div className="mb-4 sm:mb-6">
           <div className="flex justify-between text-[10px] sm:text-xs text-muted-foreground mb-1.5 sm:mb-2">
             <span>Progresso da Rifa</span>
@@ -40,8 +37,7 @@ const StatsBar = ({ stats }: StatsBarProps) => {
           </div>
         </div>
 
-        {/* Stats grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           {items.map((item, i) => (
             <motion.div
               key={item.label}
