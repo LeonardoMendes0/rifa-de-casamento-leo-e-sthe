@@ -96,7 +96,6 @@ export const useRaffle = (config: RaffleConfig) => {
     pending: numbers.filter((n) => n.status === 'pending').length,
     sold: numbers.filter((n) => n.status === 'sold').length,
     total: config.totalNumbers,
-    revenue: numbers.filter((n) => n.status === 'sold').length * config.pricePerNumber,
   };
 
   return {

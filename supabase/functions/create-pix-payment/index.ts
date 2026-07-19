@@ -8,24 +8,31 @@ const corsHeaders = {
 
 interface PayerInput {
   name: string;
-  cpf: string;
+  phone: string;
   email: string;
+  cpf?: string;
 }
 
 interface RequestBody {
-  payer: PayerInput;
+  payer: PayerInput & { cpf: string };
   amount: number;
   ticketCode: string;
   selectedNumbers: number[];
 }
+
+// CPF genérico usado apenas para satisfazer a API do Mercado Pago quando o
+// comprador não informa CPF. Não é armazenado como identificação real do usuário.
+const DEFAULT_MP_CPF = '19119119100';
 
 function validate(body: any): { ok: true; data: RequestBody } | { ok: false; error: string } {
   if (!body || typeof body !== 'object') return { ok: false, error: 'Corpo inválido' };
   const { payer, amount, ticketCode, selectedNumbers } = body;
   if (!payer || typeof payer.name !== 'string' || payer.name.trim().length < 3)
     return { ok: false, error: 'Nome inválido' };
-  const cpf = String(payer.cpf || '').replace(/\D/g, '');
-  if (cpf.length !== 11) return { ok: false, error: 'CPF inválido' };
+  const phone = String(payer.phone || '').replace(/\D/g, '');
+  if (phone.length < 10 || phone.length > 11) return { ok: false, error: 'Telefone inválido' };
+  const rawCpf = String(payer.cpf || '').replace(/\D/g, '');
+  const cpf = rawCpf.length === 11 ? rawCpf : DEFAULT_MP_CPF;
   if (typeof payer.email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payer.email))
     return { ok: false, error: 'E-mail inválido' };
   if (typeof amount !== 'number' || amount <= 0) return { ok: false, error: 'Valor inválido' };
@@ -35,7 +42,7 @@ function validate(body: any): { ok: true; data: RequestBody } | { ok: false; err
   return {
     ok: true,
     data: {
-      payer: { name: payer.name.trim(), cpf, email: payer.email.trim() },
+      payer: { name: payer.name.trim(), phone, cpf, email: payer.email.trim() },
       amount,
       ticketCode,
       selectedNumbers: selectedNumbers.map((n: any) => Number(n)),
@@ -78,7 +85,7 @@ Deno.serve(async (req) => {
         status: 'reserved',
         reserved_at: reservedAt,
         buyer_name: payer.name,
-        buyer_phone: payer.cpf,
+        buyer_phone: payer.phone,
         buyer_email: payer.email,
       })
       .in('number', selectedNumbers)

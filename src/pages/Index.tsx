@@ -1,9 +1,10 @@
 import { AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import { Shield } from 'lucide-react';
 import HeroSection from '@/components/raffle/HeroSection';
 import NumberGrid from '@/components/raffle/NumberGrid';
 import PurchasePanel from '@/components/raffle/PurchasePanel';
 import StatsBar from '@/components/raffle/StatsBar';
-import AdminPanel from '@/components/raffle/AdminPanel';
 import { useRaffle } from '@/hooks/useRaffle';
 
 const RAFFLE_CONFIG = {
@@ -20,11 +21,15 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <AdminPanel
-        numbers={raffle.numbers}
-        onConfirmPayment={raffle.confirmPayment}
-        onCancelReservation={raffle.cancelReservation}
-      />
+      <div className="fixed top-4 right-4 z-50">
+        <Link
+          to="/auth"
+          className="inline-flex items-center justify-center w-10 h-10 rounded-full border border-primary/30 bg-card/80 backdrop-blur-sm text-primary hover:bg-card"
+          aria-label="Acesso admin"
+        >
+          <Shield className="w-4 h-4" />
+        </Link>
+      </div>
 
       <HeroSection />
       <StatsBar stats={raffle.stats} />
@@ -45,7 +50,6 @@ const Index = () => {
         )}
       </AnimatePresence>
 
-      {/* Footer */}
       <footer className="py-8 text-center border-t border-border">
         <p className="text-xs text-muted-foreground">
           Feito com ❤️ para o nosso casamento

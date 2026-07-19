@@ -15,7 +15,7 @@ interface PurchasePanelProps {
   onClear: () => void;
 }
 
-type Step = 'form' | 'loading' | 'pix' | 'paid';
+type Step = 'form' | 'confirm' | 'loading' | 'pix' | 'paid';
 
 const generateTicketCode = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -24,17 +24,18 @@ const generateTicketCode = () => {
   return `#RIFA-${s}`;
 };
 
-const maskCPF = (v: string) =>
-  v.replace(/\D/g, '')
-    .slice(0, 11)
-    .replace(/(\d{3})(\d)/, '$1.$2')
-    .replace(/(\d{3})(\d)/, '$1.$2')
-    .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+const maskPhone = (v: string) => {
+  const d = v.replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 2) return d.replace(/(\d{0,2})/, '($1');
+  if (d.length <= 6) return d.replace(/(\d{2})(\d{0,4})/, '($1) $2');
+  if (d.length <= 10) return d.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+  return d.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+};
 
 const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: PurchasePanelProps) => {
   const [showDialog, setShowDialog] = useState(false);
   const [name, setName] = useState('');
-  const [cpf, setCpf] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [step, setStep] = useState<Step>('form');
   const [copied, setCopied] = useState(false);
@@ -87,19 +88,37 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
     return `${m}:${r}`;
   };
 
-  const handleSubmit = async () => {
-    const cleanCpf = cpf.replace(/\D/g, '');
-    if (name.trim().length < 3) return toast({ title: 'Informe seu nome completo', variant: 'destructive' });
-    if (cleanCpf.length !== 11) return toast({ title: 'CPF inválido', variant: 'destructive' });
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast({ title: 'E-mail inválido', variant: 'destructive' });
+  const validateForm = () => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (name.trim().length < 3) {
+      toast({ title: 'Informe seu nome completo', variant: 'destructive' });
+      return false;
+    }
+    if (cleanPhone.length < 10 || cleanPhone.length > 11) {
+      toast({ title: 'Telefone inválido', description: 'Informe DDD + número', variant: 'destructive' });
+      return false;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast({ title: 'E-mail inválido', variant: 'destructive' });
+      return false;
+    }
+    return true;
+  };
 
+  const handleOpenConfirm = () => {
+    if (!validateForm()) return;
+    setStep('confirm');
+  };
+
+  const handleSubmit = async () => {
+    const cleanPhone = phone.replace(/\D/g, '');
     const ticketCode = generateTicketCode();
     setStep('loading');
 
     try {
       const { data, error } = await supabase.functions.invoke('create-pix-payment', {
         body: {
-          payer: { name: name.trim(), cpf: cleanCpf, email: email.trim() },
+          payer: { name: name.trim(), phone: cleanPhone, email: email.trim() },
           amount: total,
           ticketCode,
           selectedNumbers,
@@ -109,7 +128,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
       if (error) throw error;
       if (!data?.qrCode) throw new Error('Resposta inválida do Mercado Pago');
 
-      onConfirm(name.trim(), cleanCpf);
+      onConfirm(name.trim(), cleanPhone);
       const copia = data.qrCode || '';
       let qrImg = data.qrCodeBase64 ? `data:image/png;base64,${data.qrCodeBase64}` : '';
       if (!qrImg && copia) {
@@ -130,7 +149,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
       console.error(e);
       const msg = e instanceof Error ? e.message : 'Erro ao gerar PIX';
       toast({ title: 'Falha ao gerar PIX', description: msg, variant: 'destructive' });
-      setStep('form');
+      setStep('confirm');
     }
   };
 
@@ -148,7 +167,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
     setTimeout(() => {
       setStep('form');
       setName('');
-      setCpf('');
+      setPhone('');
       setEmail('');
       setTicketCode('');
       setQrCodeBase64('');
@@ -216,12 +235,14 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
           <DialogHeader>
             <DialogTitle className="text-gradient-gold text-lg sm:text-xl">
               {step === 'form' && 'Seus dados'}
+              {step === 'confirm' && 'Confirmar dados'}
               {step === 'loading' && 'Gerando PIX...'}
               {step === 'pix' && 'Pagamento PIX'}
               {step === 'paid' && 'Pagamento confirmado! 🎉'}
             </DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
               {step === 'form' && `${selectedNumbers.length} número(s) · R$ ${total.toFixed(2)}`}
+              {step === 'confirm' && 'Confira os dados antes de gerar o PIX'}
               {step === 'loading' && 'Aguarde, criando seu pagamento no Mercado Pago'}
               {step === 'pix' && 'Escaneie o QR Code ou copie o código abaixo'}
               {step === 'paid' && 'Seus números foram confirmados com sucesso'}
@@ -247,12 +268,12 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
                   />
                 </div>
                 <div>
-                  <label className="text-xs sm:text-sm text-muted-foreground mb-1 block">CPF</label>
+                  <label className="text-xs sm:text-sm text-muted-foreground mb-1 block">Telefone para contato</label>
                   <Input
-                    placeholder="000.000.000-00"
-                    value={cpf}
-                    onChange={(e) => setCpf(maskCPF(e.target.value))}
-                    inputMode="numeric"
+                    placeholder="(99) 99999-9999"
+                    value={phone}
+                    onChange={(e) => setPhone(maskPhone(e.target.value))}
+                    inputMode="tel"
                     className="bg-secondary border-border text-sm"
                   />
                 </div>
@@ -269,10 +290,65 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
 
                 <Button
                   className="w-full bg-gradient-gold text-primary-foreground font-bold h-10 sm:h-12 text-sm"
-                  onClick={handleSubmit}
+                  onClick={handleOpenConfirm}
                 >
                   Gerar PIX (R$ {total.toFixed(2)})
                 </Button>
+              </motion.div>
+            )}
+
+            {step === 'confirm' && (
+              <motion.div
+                key="confirm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="space-y-3 sm:space-y-4"
+              >
+                <div className="bg-secondary rounded-lg p-3 border border-border space-y-2">
+                  <div>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Nome</p>
+                    <p className="text-sm font-semibold text-foreground">{name}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Telefone</p>
+                    <p className="text-sm font-semibold text-foreground">{phone}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">E-mail</p>
+                    <p className="text-sm font-semibold text-foreground break-all">{email}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mb-1">Números escolhidos ({selectedNumbers.length})</p>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedNumbers.map((n) => (
+                        <span key={n} className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary font-mono font-bold">
+                          {String(n).padStart(3, '0')}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Total</p>
+                    <p className="text-lg font-bold text-primary">R$ {total.toFixed(2)}</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1 h-10 sm:h-12 text-sm"
+                    onClick={() => setStep('form')}
+                  >
+                    Voltar
+                  </Button>
+                  <Button
+                    className="flex-1 bg-gradient-gold text-primary-foreground font-bold h-10 sm:h-12 text-sm"
+                    onClick={handleSubmit}
+                  >
+                    Confirmar e gerar PIX
+                  </Button>
+                </div>
               </motion.div>
             )}
 
