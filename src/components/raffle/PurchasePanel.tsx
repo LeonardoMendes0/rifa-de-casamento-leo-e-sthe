@@ -88,19 +88,37 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
     return `${m}:${r}`;
   };
 
-  const handleSubmit = async () => {
-    const cleanCpf = cpf.replace(/\D/g, '');
-    if (name.trim().length < 3) return toast({ title: 'Informe seu nome completo', variant: 'destructive' });
-    if (cleanCpf.length !== 11) return toast({ title: 'CPF inválido', variant: 'destructive' });
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast({ title: 'E-mail inválido', variant: 'destructive' });
+  const validateForm = () => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (name.trim().length < 3) {
+      toast({ title: 'Informe seu nome completo', variant: 'destructive' });
+      return false;
+    }
+    if (cleanPhone.length < 10 || cleanPhone.length > 11) {
+      toast({ title: 'Telefone inválido', description: 'Informe DDD + número', variant: 'destructive' });
+      return false;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast({ title: 'E-mail inválido', variant: 'destructive' });
+      return false;
+    }
+    return true;
+  };
 
+  const handleOpenConfirm = () => {
+    if (!validateForm()) return;
+    setStep('confirm');
+  };
+
+  const handleSubmit = async () => {
+    const cleanPhone = phone.replace(/\D/g, '');
     const ticketCode = generateTicketCode();
     setStep('loading');
 
     try {
       const { data, error } = await supabase.functions.invoke('create-pix-payment', {
         body: {
-          payer: { name: name.trim(), cpf: cleanCpf, email: email.trim() },
+          payer: { name: name.trim(), phone: cleanPhone, email: email.trim() },
           amount: total,
           ticketCode,
           selectedNumbers,
@@ -110,7 +128,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
       if (error) throw error;
       if (!data?.qrCode) throw new Error('Resposta inválida do Mercado Pago');
 
-      onConfirm(name.trim(), cleanCpf);
+      onConfirm(name.trim(), cleanPhone);
       const copia = data.qrCode || '';
       let qrImg = data.qrCodeBase64 ? `data:image/png;base64,${data.qrCodeBase64}` : '';
       if (!qrImg && copia) {
@@ -131,7 +149,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
       console.error(e);
       const msg = e instanceof Error ? e.message : 'Erro ao gerar PIX';
       toast({ title: 'Falha ao gerar PIX', description: msg, variant: 'destructive' });
-      setStep('form');
+      setStep('confirm');
     }
   };
 
