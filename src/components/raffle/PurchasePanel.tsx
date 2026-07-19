@@ -235,12 +235,14 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
           <DialogHeader>
             <DialogTitle className="text-gradient-gold text-lg sm:text-xl">
               {step === 'form' && 'Seus dados'}
+              {step === 'confirm' && 'Confirmar dados'}
               {step === 'loading' && 'Gerando PIX...'}
               {step === 'pix' && 'Pagamento PIX'}
               {step === 'paid' && 'Pagamento confirmado! 🎉'}
             </DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
               {step === 'form' && `${selectedNumbers.length} número(s) · R$ ${total.toFixed(2)}`}
+              {step === 'confirm' && 'Confira os dados antes de gerar o PIX'}
               {step === 'loading' && 'Aguarde, criando seu pagamento no Mercado Pago'}
               {step === 'pix' && 'Escaneie o QR Code ou copie o código abaixo'}
               {step === 'paid' && 'Seus números foram confirmados com sucesso'}
