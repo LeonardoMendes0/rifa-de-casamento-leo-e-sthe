@@ -167,7 +167,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
     setTimeout(() => {
       setStep('form');
       setName('');
-      setCpf('');
+      setPhone('');
       setEmail('');
       setTicketCode('');
       setQrCodeBase64('');
