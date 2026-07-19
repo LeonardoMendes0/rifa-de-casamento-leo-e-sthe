@@ -268,12 +268,12 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
                   />
                 </div>
                 <div>
-                  <label className="text-xs sm:text-sm text-muted-foreground mb-1 block">CPF</label>
+                  <label className="text-xs sm:text-sm text-muted-foreground mb-1 block">Telefone para contato</label>
                   <Input
-                    placeholder="000.000.000-00"
-                    value={cpf}
-                    onChange={(e) => setCpf(maskCPF(e.target.value))}
-                    inputMode="numeric"
+                    placeholder="(99) 99999-9999"
+                    value={phone}
+                    onChange={(e) => setPhone(maskPhone(e.target.value))}
+                    inputMode="tel"
                     className="bg-secondary border-border text-sm"
                   />
                 </div>
@@ -290,10 +290,65 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
 
                 <Button
                   className="w-full bg-gradient-gold text-primary-foreground font-bold h-10 sm:h-12 text-sm"
-                  onClick={handleSubmit}
+                  onClick={handleOpenConfirm}
                 >
                   Gerar PIX (R$ {total.toFixed(2)})
                 </Button>
+              </motion.div>
+            )}
+
+            {step === 'confirm' && (
+              <motion.div
+                key="confirm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="space-y-3 sm:space-y-4"
+              >
+                <div className="bg-secondary rounded-lg p-3 border border-border space-y-2">
+                  <div>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Nome</p>
+                    <p className="text-sm font-semibold text-foreground">{name}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Telefone</p>
+                    <p className="text-sm font-semibold text-foreground">{phone}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">E-mail</p>
+                    <p className="text-sm font-semibold text-foreground break-all">{email}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mb-1">Números escolhidos ({selectedNumbers.length})</p>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedNumbers.map((n) => (
+                        <span key={n} className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary font-mono font-bold">
+                          {String(n).padStart(3, '0')}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Total</p>
+                    <p className="text-lg font-bold text-primary">R$ {total.toFixed(2)}</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1 h-10 sm:h-12 text-sm"
+                    onClick={() => setStep('form')}
+                  >
+                    Voltar
+                  </Button>
+                  <Button
+                    className="flex-1 bg-gradient-gold text-primary-foreground font-bold h-10 sm:h-12 text-sm"
+                    onClick={handleSubmit}
+                  >
+                    Confirmar e gerar PIX
+                  </Button>
+                </div>
               </motion.div>
             )}
 
