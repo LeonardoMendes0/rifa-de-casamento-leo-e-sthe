@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
         status: 'reserved',
         reserved_at: reservedAt,
         buyer_name: payer.name,
-        buyer_phone: payer.cpf,
+        buyer_phone: payer.phone,
         buyer_email: payer.email,
       })
       .in('number', selectedNumbers)
