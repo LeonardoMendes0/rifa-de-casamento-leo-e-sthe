@@ -35,7 +35,7 @@ const maskPhone = (v: string) => {
 const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: PurchasePanelProps) => {
   const [showDialog, setShowDialog] = useState(false);
   const [name, setName] = useState('');
-  const [cpf, setCpf] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [step, setStep] = useState<Step>('form');
   const [copied, setCopied] = useState(false);
