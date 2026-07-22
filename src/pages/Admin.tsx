@@ -1,11 +1,22 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useRaffle, RaffleNumber } from '@/hooks/useRaffle';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Shield, LogOut, Sparkles, Loader2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Shield, LogOut, Sparkles, Loader2, Search, RotateCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const RAFFLE_CONFIG = {
@@ -17,7 +28,7 @@ const RAFFLE_CONFIG = {
   pixKey: '21972410175',
 };
 
-const RECENT_MS = 60_000; // números pagos nos últimos 60s ganham destaque
+const RECENT_MS = 60_000;
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -27,13 +38,14 @@ const Admin = () => {
   const [userEmail, setUserEmail] = useState<string>('');
   const raffle = useRaffle(RAFFLE_CONFIG);
   const [buyerRows, setBuyerRows] = useState<RaffleNumber[]>([]);
+  const [search, setSearch] = useState('');
+  const [releaseTarget, setReleaseTarget] = useState<RaffleNumber | null>(null);
+  const [releasing, setReleasing] = useState(false);
 
   const previousSoldRef = useRef<Set<number> | null>(null);
   const recentPaidRef = useRef<Map<number, number>>(new Map());
   const [, forceTick] = useState(0);
 
-
-  // Auth check
   useEffect(() => {
     const check = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -59,45 +71,36 @@ const Admin = () => {
     return () => sub.subscription.unsubscribe();
   }, [navigate]);
 
-  // Fetch buyer details (admin-only) directly from base table
+  const fetchBuyers = async () => {
+    const { data } = await supabase
+      .from('raffle_numbers')
+      .select('number,status,buyer_name,buyer_phone')
+      .in('status', ['reserved', 'paid'])
+      .order('number', { ascending: true });
+    if (!data) return;
+    setBuyerRows(
+      data.map((r: any) => ({
+        number: r.number,
+        status: r.status === 'paid' ? 'sold' : r.status === 'reserved' ? 'pending' : 'available',
+        buyerName: r.buyer_name ?? undefined,
+        buyerPhone: r.buyer_phone ?? undefined,
+      })),
+    );
+  };
+
   useEffect(() => {
     if (!isAdmin) return;
-    let cancelled = false;
-    const fetchBuyers = async () => {
-      const { data } = await supabase
-        .from('raffle_numbers')
-        .select('number,status,buyer_name,buyer_phone')
-        .in('status', ['reserved', 'paid'])
-        .order('number', { ascending: true });
-      if (cancelled || !data) return;
-      setBuyerRows(
-        data.map((r: any) => ({
-          number: r.number,
-          status: r.status === 'paid' ? 'sold' : r.status === 'reserved' ? 'pending' : 'available',
-          buyerName: r.buyer_name ?? undefined,
-          buyerPhone: r.buyer_phone ?? undefined,
-        })),
-      );
-    };
     fetchBuyers();
     const t = setInterval(fetchBuyers, 8000);
-    return () => {
-      cancelled = true;
-      clearInterval(t);
-    };
+    return () => clearInterval(t);
   }, [isAdmin]);
 
-  // Detect newly paid numbers, show toast, mark as "recent"
   useEffect(() => {
     if (!isAdmin) return;
-    const soldNow = new Set(
-      buyerRows.filter((n) => n.status === 'sold').map((n) => n.number),
-    );
+    const soldNow = new Set(buyerRows.filter((n) => n.status === 'sold').map((n) => n.number));
     if (previousSoldRef.current) {
       const prev = previousSoldRef.current;
-      const newlyPaid = buyerRows.filter(
-        (n) => n.status === 'sold' && !prev.has(n.number),
-      );
+      const newlyPaid = buyerRows.filter((n) => n.status === 'sold' && !prev.has(n.number));
       if (newlyPaid.length > 0) {
         const now = Date.now();
         newlyPaid.forEach((n) => {
@@ -113,8 +116,6 @@ const Admin = () => {
     previousSoldRef.current = soldNow;
   }, [buyerRows, isAdmin, toast]);
 
-
-  // Tick to expire "recent" badges
   useEffect(() => {
     const t = setInterval(() => {
       const now = Date.now();
@@ -134,6 +135,50 @@ const Admin = () => {
     await supabase.auth.signOut();
     navigate('/auth');
   };
+
+  const handleRelease = async () => {
+    if (!releaseTarget) return;
+    setReleasing(true);
+    const { error } = await supabase
+      .from('raffle_numbers')
+      .update({
+        status: 'available',
+        buyer_name: null,
+        buyer_phone: null,
+        buyer_email: null,
+        payment_id: null,
+        reserved_at: null,
+      })
+      .eq('number', releaseTarget.number);
+    setReleasing(false);
+    if (error) {
+      toast({ title: 'Erro ao disponibilizar', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({
+      title: `Número ${String(releaseTarget.number).padStart(3, '0')} disponibilizado`,
+      description: 'O número está liberado para nova compra.',
+    });
+    setReleaseTarget(null);
+    await Promise.all([fetchBuyers(), raffle.refresh()]);
+  };
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return buyerRows;
+    const digits = q.replace(/\D/g, '');
+    return buyerRows.filter((n) => {
+      const numStr = String(n.number).padStart(3, '0');
+      const name = (n.buyerName || '').toLowerCase();
+      const phone = (n.buyerPhone || '').replace(/\D/g, '');
+      return (
+        numStr.includes(q) ||
+        String(n.number).includes(q) ||
+        name.includes(q) ||
+        (digits && phone.includes(digits))
+      );
+    });
+  }, [buyerRows, search]);
 
   if (checking) {
     return (
@@ -162,9 +207,6 @@ const Admin = () => {
       </div>
     );
   }
-
-  const reserved: RaffleNumber[] = buyerRows;
-
 
   return (
     <div className="min-h-screen bg-background p-4 sm:p-8">
@@ -199,12 +241,25 @@ const Admin = () => {
         </div>
 
         <Card className="p-3 sm:p-4 overflow-x-auto">
-          <p className="text-sm text-muted-foreground mb-3">
-            {reserved.length} número(s) reservado(s) ou vendido(s)
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+            <p className="text-sm text-muted-foreground">
+              {filtered.length} de {buyerRows.length} reservado(s) ou vendido(s)
+            </p>
+            <div className="relative w-full sm:w-72">
+              <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por número, nome ou telefone"
+                className="pl-8"
+              />
+            </div>
+          </div>
 
-          {reserved.length === 0 ? (
+          {buyerRows.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">Nenhuma reserva ainda</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">Nenhum resultado encontrado</p>
           ) : (
             <Table>
               <TableHeader>
@@ -213,10 +268,11 @@ const Admin = () => {
                   <TableHead>Nome</TableHead>
                   <TableHead>Telefone</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {reserved.map((n) => {
+                {filtered.map((n) => {
                   const isRecent = recentPaidRef.current.has(n.number);
                   return (
                     <TableRow
@@ -246,6 +302,17 @@ const Admin = () => {
                           )}
                         </div>
                       </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setReleaseTarget(n)}
+                          className="h-8 border-primary/40 text-primary hover:bg-primary/10"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                          Disponibilizar
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -254,6 +321,27 @@ const Admin = () => {
           )}
         </Card>
       </div>
+
+      <AlertDialog open={!!releaseTarget} onOpenChange={(o) => !o && setReleaseTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Disponibilizar número {releaseTarget && String(releaseTarget.number).padStart(3, '0')}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação vai apagar os dados do comprador
+              {releaseTarget?.buyerName ? ` (${releaseTarget.buyerName})` : ''} e liberar o número
+              para nova compra. Não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={releasing}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRelease} disabled={releasing}>
+              {releasing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Disponibilizar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
