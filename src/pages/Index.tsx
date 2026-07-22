@@ -5,7 +5,9 @@ import HeroSection from '@/components/raffle/HeroSection';
 import NumberGrid from '@/components/raffle/NumberGrid';
 import PurchasePanel from '@/components/raffle/PurchasePanel';
 import StatsBar from '@/components/raffle/StatsBar';
+import PurchaseTracker from '@/components/raffle/PurchaseTracker';
 import { useRaffle } from '@/hooks/useRaffle';
+
 
 const RAFFLE_CONFIG = {
   title: 'Rifa do Casamento',
