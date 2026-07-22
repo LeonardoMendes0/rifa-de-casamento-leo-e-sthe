@@ -115,7 +115,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
     try {
       const { data, error } = await supabase.functions.invoke('create-pix-payment', {
         body: {
-          payer: { name: name.trim(), phone: cleanPhone, email: email.trim() },
+          payer: { name: name.trim(), phone: cleanPhone, instagram: email.trim() },
           amount: total,
           ticketCode,
           selectedNumbers,
@@ -337,10 +337,12 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
                     <p className="text-[10px] sm:text-xs text-muted-foreground">Telefone</p>
                     <p className="text-sm font-semibold text-foreground">{phone}</p>
                   </div>
-                  <div>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground">E-mail</p>
-                    <p className="text-sm font-semibold text-foreground break-all">{email}</p>
-                  </div>
+                  {email.trim() && (
+                    <div>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">Instagram</p>
+                      <p className="text-sm font-semibold text-foreground break-all">{email}</p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-[10px] sm:text-xs text-muted-foreground mb-1">Números escolhidos ({selectedNumbers.length})</p>
                     <div className="flex flex-wrap gap-1">
