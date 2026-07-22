@@ -99,10 +99,6 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
       toast({ title: 'Telefone inválido', description: 'Informe DDD + número', variant: 'destructive' });
       return false;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      toast({ title: 'E-mail inválido', variant: 'destructive' });
-      return false;
-    }
     return true;
   };
 
@@ -119,7 +115,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
     try {
       const { data, error } = await supabase.functions.invoke('create-pix-payment', {
         body: {
-          payer: { name: name.trim(), phone: cleanPhone, email: email.trim() },
+          payer: { name: name.trim(), phone: cleanPhone, instagram: email.trim() },
           amount: total,
           ticketCode,
           selectedNumbers,
@@ -303,10 +299,12 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
                   />
                 </div>
                 <div>
-                  <label className="text-xs sm:text-sm text-muted-foreground mb-1 block">E-mail</label>
+                  <label className="text-xs sm:text-sm text-muted-foreground mb-1 block">
+                    Instagram <span className="text-muted-foreground/70">(opcional)</span>
+                  </label>
                   <Input
-                    type="email"
-                    placeholder="voce@email.com"
+                    type="text"
+                    placeholder="@seuinstagram"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="bg-secondary border-border text-sm"
@@ -339,10 +337,12 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
                     <p className="text-[10px] sm:text-xs text-muted-foreground">Telefone</p>
                     <p className="text-sm font-semibold text-foreground">{phone}</p>
                   </div>
-                  <div>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground">E-mail</p>
-                    <p className="text-sm font-semibold text-foreground break-all">{email}</p>
-                  </div>
+                  {email.trim() && (
+                    <div>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">Instagram</p>
+                      <p className="text-sm font-semibold text-foreground break-all">{email}</p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-[10px] sm:text-xs text-muted-foreground mb-1">Números escolhidos ({selectedNumbers.length})</p>
                     <div className="flex flex-wrap gap-1">

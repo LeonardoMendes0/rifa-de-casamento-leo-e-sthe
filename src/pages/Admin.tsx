@@ -225,7 +225,7 @@ const Admin = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
           <Card className="p-3 sm:p-4 text-center">
             <p className="text-[10px] sm:text-xs text-muted-foreground">Disponíveis</p>
             <p className="text-xl sm:text-2xl font-bold text-primary">{raffle.stats.available}</p>
@@ -237,6 +237,15 @@ const Admin = () => {
           <Card className="p-3 sm:p-4 text-center">
             <p className="text-[10px] sm:text-xs text-muted-foreground">Pagos</p>
             <p className="text-xl sm:text-2xl font-bold text-primary">{raffle.stats.sold}</p>
+          </Card>
+          <Card className="p-3 sm:p-4 text-center">
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Valor Arrecadado</p>
+            <p className="text-xl sm:text-2xl font-bold text-gradient-gold">
+              {(raffle.stats.sold * RAFFLE_CONFIG.pricePerNumber).toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+              })}
+            </p>
           </Card>
         </div>
 
