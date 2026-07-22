@@ -163,9 +163,8 @@ const Admin = () => {
     );
   }
 
-  const reserved: RaffleNumber[] = raffle.numbers.filter(
-    (n) => n.status === 'pending' || n.status === 'sold',
-  );
+  const reserved: RaffleNumber[] = buyerRows;
+
 
   return (
     <div className="min-h-screen bg-background p-4 sm:p-8">
