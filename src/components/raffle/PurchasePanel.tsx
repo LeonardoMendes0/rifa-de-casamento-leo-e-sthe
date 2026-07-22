@@ -299,10 +299,12 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
                   />
                 </div>
                 <div>
-                  <label className="text-xs sm:text-sm text-muted-foreground mb-1 block">E-mail</label>
+                  <label className="text-xs sm:text-sm text-muted-foreground mb-1 block">
+                    Instagram <span className="text-muted-foreground/70">(opcional)</span>
+                  </label>
                   <Input
-                    type="email"
-                    placeholder="voce@email.com"
+                    type="text"
+                    placeholder="@seuinstagram"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="bg-secondary border-border text-sm"
