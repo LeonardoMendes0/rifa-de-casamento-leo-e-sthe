@@ -99,10 +99,6 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
       toast({ title: 'Telefone inválido', description: 'Informe DDD + número', variant: 'destructive' });
       return false;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      toast({ title: 'E-mail inválido', variant: 'destructive' });
-      return false;
-    }
     return true;
   };
 
