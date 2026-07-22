@@ -73,7 +73,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      raffle_numbers_public: {
+        Row: {
+          number: number | null
+          payment_id: string | null
+          status: string | null
+        }
+        Insert: {
+          number?: number | null
+          payment_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          number?: number | null
+          payment_id?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
