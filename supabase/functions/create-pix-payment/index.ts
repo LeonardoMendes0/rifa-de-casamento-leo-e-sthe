@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
         reserved_at: reservedAt,
         buyer_name: payer.name,
         buyer_phone: payer.phone,
-        buyer_email: payer.email,
+        buyer_email: payer.instagram || null,
       })
       .in('number', selectedNumbers)
       .eq('status', 'available')
