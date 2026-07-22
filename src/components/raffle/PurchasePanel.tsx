@@ -61,14 +61,15 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
     let cancelled = false;
 
     const check = async () => {
-      const { data } = await supabase
-        .from('raffle_numbers')
+      const { data } = await (supabase as any)
+        .from('raffle_numbers_public')
         .select('status')
         .eq('payment_id', paymentId)
         .limit(1)
         .maybeSingle();
       if (cancelled) return;
       if (data?.status === 'paid') {
+
         setStep('paid');
         toast({ title: 'Pagamento confirmado! 🎉', description: `Bilhete ${ticketCode} confirmado.` });
       }
