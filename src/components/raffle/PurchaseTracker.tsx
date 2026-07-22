@@ -54,10 +54,11 @@ const PurchaseTracker = () => {
     if (list.length === 0) return;
 
     const ids = list.map((p) => p.paymentId);
-    const { data, error } = await supabase
-      .from('raffle_numbers')
+    const { data, error } = await (supabase as any)
+      .from('raffle_numbers_public')
       .select('payment_id,status')
       .in('payment_id', ids);
+
     if (error || !data) return;
 
     // status por paymentId (se ao menos um número está pago, considera pago)
