@@ -39,7 +39,7 @@ function validate(body: any): { ok: true; data: RequestBody } | { ok: false; err
   const rawEmail = String(payer.email || '').trim();
   const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)
     ? rawEmail
-    : `comprador-${phone}@rifa.local`;
+    : `comprador-${phone || Date.now()}@example.com`;
   if (typeof amount !== 'number' || amount <= 0) return { ok: false, error: 'Valor inválido' };
   if (typeof ticketCode !== 'string' || !ticketCode) return { ok: false, error: 'Código do bilhete inválido' };
   if (!Array.isArray(selectedNumbers) || selectedNumbers.length === 0)
