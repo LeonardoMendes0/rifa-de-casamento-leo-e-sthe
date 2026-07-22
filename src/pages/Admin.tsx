@@ -26,10 +26,12 @@ const Admin = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [userEmail, setUserEmail] = useState<string>('');
   const raffle = useRaffle(RAFFLE_CONFIG);
+  const [buyerRows, setBuyerRows] = useState<RaffleNumber[]>([]);
 
   const previousSoldRef = useRef<Set<number> | null>(null);
   const recentPaidRef = useRef<Map<number, number>>(new Map());
   const [, forceTick] = useState(0);
+
 
   // Auth check
   useEffect(() => {
@@ -57,15 +59,43 @@ const Admin = () => {
     return () => sub.subscription.unsubscribe();
   }, [navigate]);
 
+  // Fetch buyer details (admin-only) directly from base table
+  useEffect(() => {
+    if (!isAdmin) return;
+    let cancelled = false;
+    const fetchBuyers = async () => {
+      const { data } = await supabase
+        .from('raffle_numbers')
+        .select('number,status,buyer_name,buyer_phone')
+        .in('status', ['reserved', 'paid'])
+        .order('number', { ascending: true });
+      if (cancelled || !data) return;
+      setBuyerRows(
+        data.map((r: any) => ({
+          number: r.number,
+          status: r.status === 'paid' ? 'sold' : r.status === 'reserved' ? 'pending' : 'available',
+          buyerName: r.buyer_name ?? undefined,
+          buyerPhone: r.buyer_phone ?? undefined,
+        })),
+      );
+    };
+    fetchBuyers();
+    const t = setInterval(fetchBuyers, 8000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [isAdmin]);
+
   // Detect newly paid numbers, show toast, mark as "recent"
   useEffect(() => {
     if (!isAdmin) return;
     const soldNow = new Set(
-      raffle.numbers.filter((n) => n.status === 'sold').map((n) => n.number),
+      buyerRows.filter((n) => n.status === 'sold').map((n) => n.number),
     );
     if (previousSoldRef.current) {
       const prev = previousSoldRef.current;
-      const newlyPaid = raffle.numbers.filter(
+      const newlyPaid = buyerRows.filter(
         (n) => n.status === 'sold' && !prev.has(n.number),
       );
       if (newlyPaid.length > 0) {
@@ -81,7 +111,8 @@ const Admin = () => {
       }
     }
     previousSoldRef.current = soldNow;
-  }, [raffle.numbers, isAdmin, toast]);
+  }, [buyerRows, isAdmin, toast]);
+
 
   // Tick to expire "recent" badges
   useEffect(() => {
@@ -132,9 +163,8 @@ const Admin = () => {
     );
   }
 
-  const reserved: RaffleNumber[] = raffle.numbers.filter(
-    (n) => n.status === 'pending' || n.status === 'sold',
-  );
+  const reserved: RaffleNumber[] = buyerRows;
+
 
   return (
     <div className="min-h-screen bg-background p-4 sm:p-8">
