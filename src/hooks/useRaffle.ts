@@ -32,20 +32,19 @@ export const useRaffle = (config: RaffleConfig) => {
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
 
   const fetchAll = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('raffle_numbers')
-      .select('number,status,buyer_name,buyer_phone')
+    const { data, error } = await (supabase as any)
+      .from('raffle_numbers_public')
+      .select('number,status')
       .order('number', { ascending: true });
     if (error || !data) return;
     setNumbers(
       data.map((r: any) => ({
         number: r.number,
         status: mapStatus(r.status),
-        buyerName: r.buyer_name ?? undefined,
-        buyerPhone: r.buyer_phone ?? undefined,
       })),
     );
   }, []);
+
 
   useEffect(() => {
     fetchAll();
