@@ -141,10 +141,34 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
       setQrCodeBase64(qrImg);
       setCopiaCola(copia);
       setTicketCode(data.ticketCode || ticketCode);
-      setPaymentId(data.paymentId ? String(data.paymentId) : '');
+      const pid = data.paymentId ? String(data.paymentId) : '';
+      setPaymentId(pid);
       setSecondsLeft(30 * 60);
       setStep('pix');
+
+      // Persistir compra pendente para mostrar confirmação quando o usuário voltar
+      if (pid) {
+        try {
+          const key = 'rifa_pending_purchases';
+          const list = JSON.parse(localStorage.getItem(key) || '[]');
+          list.push({
+            paymentId: pid,
+            ticketCode: data.ticketCode || ticketCode,
+            name: name.trim(),
+            phone: cleanPhone,
+            email: email.trim(),
+            numbers: selectedNumbers,
+            total,
+            createdAt: Date.now(),
+          });
+          localStorage.setItem(key, JSON.stringify(list));
+        } catch {
+          // ignore storage errors
+        }
+      }
+
       toast({ title: 'PIX gerado!', description: `Bilhete ${ticketCode} reservado.` });
+
     } catch (e) {
       console.error(e);
       const msg = e instanceof Error ? e.message : 'Erro ao gerar PIX';
