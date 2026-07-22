@@ -26,10 +26,12 @@ const Admin = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [userEmail, setUserEmail] = useState<string>('');
   const raffle = useRaffle(RAFFLE_CONFIG);
+  const [buyerRows, setBuyerRows] = useState<RaffleNumber[]>([]);
 
   const previousSoldRef = useRef<Set<number> | null>(null);
   const recentPaidRef = useRef<Map<number, number>>(new Map());
   const [, forceTick] = useState(0);
+
 
   // Auth check
   useEffect(() => {
