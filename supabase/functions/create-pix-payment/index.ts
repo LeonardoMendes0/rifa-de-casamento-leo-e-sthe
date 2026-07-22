@@ -9,12 +9,13 @@ const corsHeaders = {
 interface PayerInput {
   name: string;
   phone: string;
-  email: string;
+  email?: string;
+  instagram?: string;
   cpf?: string;
 }
 
 interface RequestBody {
-  payer: PayerInput & { cpf: string };
+  payer: Required<Pick<PayerInput, 'name' | 'phone' | 'cpf' | 'email'>> & { instagram: string };
   amount: number;
   ticketCode: string;
   selectedNumbers: number[];
@@ -33,8 +34,12 @@ function validate(body: any): { ok: true; data: RequestBody } | { ok: false; err
   if (phone.length < 10 || phone.length > 11) return { ok: false, error: 'Telefone inválido' };
   const rawCpf = String(payer.cpf || '').replace(/\D/g, '');
   const cpf = rawCpf.length === 11 ? rawCpf : DEFAULT_MP_CPF;
-  if (typeof payer.email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payer.email))
-    return { ok: false, error: 'E-mail inválido' };
+  const instagram = String(payer.instagram || '').trim();
+  // Mercado Pago exige e-mail válido; se o comprador não informa, sintetizamos um.
+  const rawEmail = String(payer.email || '').trim();
+  const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)
+    ? rawEmail
+    : `comprador-${phone}@rifa.local`;
   if (typeof amount !== 'number' || amount <= 0) return { ok: false, error: 'Valor inválido' };
   if (typeof ticketCode !== 'string' || !ticketCode) return { ok: false, error: 'Código do bilhete inválido' };
   if (!Array.isArray(selectedNumbers) || selectedNumbers.length === 0)
@@ -42,7 +47,7 @@ function validate(body: any): { ok: true; data: RequestBody } | { ok: false; err
   return {
     ok: true,
     data: {
-      payer: { name: payer.name.trim(), phone, cpf, email: payer.email.trim() },
+      payer: { name: payer.name.trim(), phone, cpf, email, instagram },
       amount,
       ticketCode,
       selectedNumbers: selectedNumbers.map((n: any) => Number(n)),
