@@ -11,11 +11,12 @@ interface PayerInput {
   phone: string;
   email?: string;
   instagram?: string;
+  indicacao?: string | null;
   cpf?: string;
 }
 
 interface RequestBody {
-  payer: Required<Pick<PayerInput, 'name' | 'phone' | 'cpf' | 'email'>> & { instagram: string };
+  payer: Required<Pick<PayerInput, 'name' | 'phone' | 'cpf' | 'email'>> & { instagram: string; indicacao: string | null };
   amount: number;
   ticketCode: string;
   selectedNumbers: number[];
@@ -35,6 +36,7 @@ function validate(body: any): { ok: true; data: RequestBody } | { ok: false; err
   const rawCpf = String(payer.cpf || '').replace(/\D/g, '');
   const cpf = rawCpf.length === 11 ? rawCpf : DEFAULT_MP_CPF;
   const instagram = String(payer.instagram || '').trim();
+  const indicacao = String(payer.indicacao || '').trim() || null;
   // Mercado Pago exige e-mail válido; se o comprador não informa, sintetizamos um.
   const rawEmail = String(payer.email || '').trim();
   const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)
@@ -47,7 +49,7 @@ function validate(body: any): { ok: true; data: RequestBody } | { ok: false; err
   return {
     ok: true,
     data: {
-      payer: { name: payer.name.trim(), phone, cpf, email, instagram },
+      payer: { name: payer.name.trim(), phone, cpf, email, instagram, indicacao },
       amount,
       ticketCode,
       selectedNumbers: selectedNumbers.map((n: any) => Number(n)),
@@ -92,6 +94,7 @@ Deno.serve(async (req) => {
         buyer_name: payer.name,
         buyer_phone: payer.phone,
         buyer_email: payer.instagram || null,
+        indicacao: payer.indicacao,
       })
       .in('number', selectedNumbers)
       .eq('status', 'available')
@@ -110,6 +113,7 @@ Deno.serve(async (req) => {
             buyer_name: null,
             buyer_phone: null,
             buyer_email: null,
+            indicacao: null,
           })
           .in('number', reserved.map((r: any) => r.number));
       }
@@ -161,6 +165,7 @@ Deno.serve(async (req) => {
           buyer_name: null,
           buyer_phone: null,
           buyer_email: null,
+          indicacao: null,
         })
         .in('number', selectedNumbers);
 

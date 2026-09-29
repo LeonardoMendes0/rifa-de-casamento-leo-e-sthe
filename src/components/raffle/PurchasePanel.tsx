@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ShoppingCart, Copy, Check, X, CreditCard, Loader2, Ticket, Clock, PartyPopper } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -16,6 +17,20 @@ interface PurchasePanelProps {
 }
 
 type Step = 'form' | 'confirm' | 'loading' | 'pix' | 'paid';
+
+const REFERRAL_OPTIONS = [
+  'Jennifer e Thiago',
+  'Rani e Junior',
+  'John e Sofia',
+  'Cleiane e Mateus',
+  'Sthefany e Pedro',
+  'Sara e Christian',
+  'Alexandra',
+  'Duda',
+  'Brenda e Matheus',
+  'Gleice e Rodrigo',
+  'Camila e Caio',
+] as const;
 
 const generateTicketCode = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -37,6 +52,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [indicacao, setIndicacao] = useState('');
   const [step, setStep] = useState<Step>('form');
   const [copied, setCopied] = useState(false);
   const [ticketCode, setTicketCode] = useState('');
@@ -115,7 +131,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
     try {
       const { data, error } = await supabase.functions.invoke('create-pix-payment', {
         body: {
-          payer: { name: name.trim(), phone: cleanPhone, instagram: email.trim() },
+          payer: { name: name.trim(), phone: cleanPhone, instagram: email.trim(), indicacao: indicacao || null },
           amount: total,
           ticketCode,
           selectedNumbers,
@@ -190,6 +206,7 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
       setName('');
       setPhone('');
       setEmail('');
+      setIndicacao('');
       setTicketCode('');
       setQrCodeBase64('');
       setCopiaCola('');
@@ -310,6 +327,22 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
                     className="bg-secondary border-border text-sm"
                   />
                 </div>
+                <div>
+                  <label className="text-xs sm:text-sm text-muted-foreground mb-1 block">
+                    Quem te indicou? <span className="text-muted-foreground/70">(opcional)</span>
+                  </label>
+                  <Select value={indicacao || 'none'} onValueChange={(value) => setIndicacao(value === 'none' ? '' : value)}>
+                    <SelectTrigger className="bg-secondary border-border text-sm focus:ring-primary">
+                      <SelectValue placeholder="Ninguém / Sem indicação" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Ninguém / Sem indicação</SelectItem>
+                      {REFERRAL_OPTIONS.map((option) => (
+                        <SelectItem key={option} value={option}>{option}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
                 <Button
                   className="w-full bg-gradient-gold text-primary-foreground font-bold h-10 sm:h-12 text-sm"
@@ -343,6 +376,10 @@ const PurchasePanel = ({ selectedNumbers, pricePerNumber, onConfirm, onClear }: 
                       <p className="text-sm font-semibold text-foreground break-all">{email}</p>
                     </div>
                   )}
+                  <div>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Quem te indicou?</p>
+                    <p className="text-sm font-semibold text-foreground">{indicacao || 'Ninguém / Sem indicação'}</p>
+                  </div>
                   <div>
                     <p className="text-[10px] sm:text-xs text-muted-foreground mb-1">Números escolhidos ({selectedNumbers.length})</p>
                     <div className="flex flex-wrap gap-1">

@@ -5,6 +5,7 @@ import { useRaffle, RaffleNumber } from '@/hooks/useRaffle';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   AlertDialog,
@@ -29,6 +30,7 @@ const RAFFLE_CONFIG = {
 };
 
 const RECENT_MS = 60_000;
+const ALL_REFERRALS = '__all__';
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -39,6 +41,7 @@ const Admin = () => {
   const raffle = useRaffle(RAFFLE_CONFIG);
   const [buyerRows, setBuyerRows] = useState<RaffleNumber[]>([]);
   const [search, setSearch] = useState('');
+  const [referralFilter, setReferralFilter] = useState(ALL_REFERRALS);
   const [releaseTarget, setReleaseTarget] = useState<RaffleNumber | null>(null);
   const [releasing, setReleasing] = useState(false);
 
@@ -74,7 +77,7 @@ const Admin = () => {
   const fetchBuyers = async () => {
     const { data } = await supabase
       .from('raffle_numbers')
-      .select('number,status,buyer_name,buyer_phone')
+      .select('number,status,buyer_name,buyer_phone,indicacao')
       .in('status', ['reserved', 'paid'])
       .order('number', { ascending: true });
     if (!data) return;
@@ -84,6 +87,7 @@ const Admin = () => {
         status: r.status === 'paid' ? 'sold' : r.status === 'reserved' ? 'pending' : 'available',
         buyerName: r.buyer_name ?? undefined,
         buyerPhone: r.buyer_phone ?? undefined,
+        indicacao: r.indicacao ?? undefined,
       })),
     );
   };
@@ -146,6 +150,7 @@ const Admin = () => {
         buyer_name: null,
         buyer_phone: null,
         buyer_email: null,
+        indicacao: null,
         payment_id: null,
         reserved_at: null,
       })
@@ -165,9 +170,10 @@ const Admin = () => {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return buyerRows;
     const digits = q.replace(/\D/g, '');
     return buyerRows.filter((n) => {
+      if (referralFilter !== ALL_REFERRALS && (n.indicacao || '') !== referralFilter) return false;
+      if (!q) return true;
       const numStr = String(n.number).padStart(3, '0');
       const name = (n.buyerName || '').toLowerCase();
       const phone = (n.buyerPhone || '').replace(/\D/g, '');
@@ -178,7 +184,16 @@ const Admin = () => {
         (digits && phone.includes(digits))
       );
     });
-  }, [buyerRows, search]);
+  }, [buyerRows, search, referralFilter]);
+
+  const referralCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    buyerRows.forEach((row) => {
+      const label = row.indicacao || 'Sem indicação';
+      counts.set(label, (counts.get(label) || 0) + 1);
+    });
+    return Array.from(counts.entries()).sort(([a], [b]) => a.localeCompare(b, 'pt-BR'));
+  }, [buyerRows]);
 
   if (checking) {
     return (
@@ -250,20 +265,44 @@ const Admin = () => {
         </div>
 
         <Card className="p-3 sm:p-4 overflow-x-auto">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-3">
             <p className="text-sm text-muted-foreground">
               {filtered.length} de {buyerRows.length} reservado(s) ou vendido(s)
             </p>
-            <div className="relative w-full sm:w-72">
-              <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar por número, nome ou telefone"
-                className="pl-8"
-              />
+            <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar por número, nome ou telefone"
+                  className="pl-8"
+                />
+              </div>
+              <Select value={referralFilter} onValueChange={setReferralFilter}>
+                <SelectTrigger className="w-full sm:w-56 bg-secondary border-border">
+                  <SelectValue placeholder="Todas as indicações" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_REFERRALS}>Todas as indicações</SelectItem>
+                  <SelectItem value="">Sem indicação</SelectItem>
+                  {referralCounts.filter(([name]) => name !== 'Sem indicação').map(([name, count]) => (
+                    <SelectItem key={name} value={name}>{name} ({count})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
+
+          {referralCounts.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-3 mb-1" aria-label="Contagem por indicação">
+              {referralCounts.map(([name, count]) => (
+                <span key={name} className="shrink-0 rounded-md border border-border bg-secondary px-2.5 py-1 text-xs text-muted-foreground">
+                  {name}: <strong className="text-primary">{count}</strong>
+                </span>
+              ))}
+            </div>
+          )}
 
           {buyerRows.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">Nenhuma reserva ainda</p>
@@ -276,6 +315,7 @@ const Admin = () => {
                   <TableHead>Nº</TableHead>
                   <TableHead>Nome</TableHead>
                   <TableHead>Telefone</TableHead>
+                  <TableHead>Indicação</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -293,6 +333,7 @@ const Admin = () => {
                       </TableCell>
                       <TableCell>{n.buyerName}</TableCell>
                       <TableCell className="text-xs">{n.buyerPhone}</TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">{n.indicacao || 'Sem indicação'}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           <span
