@@ -31,6 +31,7 @@ const RAFFLE_CONFIG = {
 
 const RECENT_MS = 60_000;
 const ALL_REFERRALS = '__all__';
+const NO_REFERRAL = '__none__';
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -172,7 +173,8 @@ const Admin = () => {
     const q = search.trim().toLowerCase();
     const digits = q.replace(/\D/g, '');
     return buyerRows.filter((n) => {
-      if (referralFilter !== ALL_REFERRALS && (n.indicacao || '') !== referralFilter) return false;
+      if (referralFilter === NO_REFERRAL && n.indicacao) return false;
+      if (referralFilter !== ALL_REFERRALS && referralFilter !== NO_REFERRAL && n.indicacao !== referralFilter) return false;
       if (!q) return true;
       const numStr = String(n.number).padStart(3, '0');
       const name = (n.buyerName || '').toLowerCase();
@@ -285,7 +287,7 @@ const Admin = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={ALL_REFERRALS}>Todas as indicações</SelectItem>
-                  <SelectItem value="">Sem indicação</SelectItem>
+                  <SelectItem value={NO_REFERRAL}>Sem indicação</SelectItem>
                   {referralCounts.filter(([name]) => name !== 'Sem indicação').map(([name, count]) => (
                     <SelectItem key={name} value={name}>{name} ({count})</SelectItem>
                   ))}
