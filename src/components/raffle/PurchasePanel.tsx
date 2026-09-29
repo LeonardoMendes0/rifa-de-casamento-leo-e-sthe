@@ -30,6 +30,7 @@ const REFERRAL_OPTIONS = [
   'Brenda e Matheus',
   'Gleice e Rodrigo',
   'Camila e Caio',
+  'João Vitor',
 ] as const;
 
 const generateTicketCode = () => {
