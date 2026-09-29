@@ -21,6 +21,7 @@ export type Database = {
           buyer_phone: string | null
           created_at: string
           id: number
+          indicacao: string | null
           number: number
           payment_id: string | null
           reserved_at: string | null
@@ -32,6 +33,7 @@ export type Database = {
           buyer_phone?: string | null
           created_at?: string
           id?: number
+          indicacao?: string | null
           number: number
           payment_id?: string | null
           reserved_at?: string | null
@@ -43,6 +45,7 @@ export type Database = {
           buyer_phone?: string | null
           created_at?: string
           id?: number
+          indicacao?: string | null
           number?: number
           payment_id?: string | null
           reserved_at?: string | null

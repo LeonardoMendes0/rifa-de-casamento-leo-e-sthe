@@ -1,0 +1,1 @@
+ALTER TABLE public.raffle_numbers ADD COLUMN IF NOT EXISTS indicacao text NULL;
