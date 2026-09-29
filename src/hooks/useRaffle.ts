@@ -8,6 +8,7 @@ export interface RaffleNumber {
   status: NumberStatus;
   buyerName?: string;
   buyerPhone?: string;
+  indicacao?: string;
 }
 
 export interface RaffleConfig {
